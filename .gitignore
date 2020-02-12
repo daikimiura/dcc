@@ -1,5 +1,6 @@
 *~
 *.o
+*.dSYM
 tmp*
 a.out
 dcc
