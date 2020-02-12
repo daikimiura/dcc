@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// 入力プログラム
+char *user_input;
+
 // トークンの種類
 typedef enum {
   TK_RESERVED, // 記号
@@ -39,6 +42,21 @@ void error(char *fmt, ...) {
   exit(1);
 }
 
+// エラー内容とエラーが起きた位置を報告するための関数
+void error_at(char *loc, char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+
+  int pos = loc - user_input;
+  fprintf(stderr, "'%s'\n", user_input);
+  fprintf(stderr, "%*s", pos, ""); // pos個の空白を出力
+  fprintf(stderr, "^ ");
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  exit(1);
+
+}
+
 // 現在のトークンが期待している記号の時には、トークンを1つ読み進めてtrueを返す
 // それ以外の場合にはfalseを返す
 bool consume(char op) {
@@ -52,7 +70,7 @@ bool consume(char op) {
 // それ以外の場合はエラーを返す
 bool expect(char op) {
   if (token->kind != TK_RESERVED || token->str[0] != op)
-    error("'%c'ではありません", op);
+    error_at(token->next->str, "'%c'ではありません", op);
   token = token->next;
   return true;
 }
@@ -61,7 +79,7 @@ bool expect(char op) {
 // それ以外の場合はエラーを返す
 int expect_number() {
   if (token->kind != TK_NUM)
-    error("数値ではありません");
+    error_at(token->next->str, "数値ではありません");
   int val = token->val;
   token = token->next;
   return val;
@@ -117,6 +135,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  user_input = argv[1];
   token = tokenize(argv[1]);
 
   printf(".intel_syntax noprefix\n");
