@@ -4,10 +4,50 @@
 
 #include "dcc.h"
 
+
+// 与えられたノードが変数を指しているときに、その変数のアドレスを計算して、それをスタックにプッシュし
+// それ以外の場合にはエラーを返す
+void gen_addr(Node *node) {
+  if (node->kind != ND_LVAR)
+    error("ローカル変数ではありません");
+
+  int offset = (node->name - 'a' + 1) * 8;
+  printf("  mov rax, rbp\n");
+  printf("  sub rax, %d\n", offset);
+  printf("  push rax\n");
+}
+
+// スタックからポップしたアドレスから値をロードし、スタックにプッシュする
+void load() {
+  printf("  pop rax\n");
+  printf("  mov rax, [rax]\n");
+  printf("  push rax\n");
+}
+
+// スタックから値を2つ(1つ目: 右辺値、2つ目: 左辺のアドレス)ポップして、アドレスに値を保存する。
+// そして保存した値をプッシュする
+void store() {
+  printf("  pop rdi\n");
+  printf("  pop rax\n");
+  printf("  mov [rax], rdi\n");
+  printf("  push rdi\n");
+}
+
 void gen(Node *node) {
-  if (node->kind == ND_NUM) {
-    printf("  push %d\n", node->val);
-    return;
+  switch (node->kind) {
+    case ND_NUM:
+      printf("  push %d\n", node->val);
+      return;
+    case ND_LVAR:
+      gen_addr(node);
+      load();
+      return;
+    case ND_ASSIGN:
+      gen_addr(node->lhs);
+      gen(node->rhs);
+      store();
+      return;
+    default:;
   }
 
   gen(node->lhs);
@@ -67,11 +107,23 @@ void codegen(Node *node) {
   printf(".global _main\n");
   printf("_main:\n");
 
-  // 抽象構文木を下りながらコード生成
-  gen(node);
+  // プロローグ
+  printf("  push rbp\n");
+  printf("  mov rbp, rsp\n");
+  // 変数26個分(a~z)の領域を確保する
+  printf("  sub rsp, 208\n"); // 26 (文字) * 8 (bytes/文字) = 208 (bytes)
 
-  // スタックトップに式(expr)全体の値が残っているはずなので
-  // それをRAXにロードして関数からの返り値とする
-  printf("  pop rax\n");
+  // 抽象構文木を下りながらコード生成
+  for (Node *n = node; n; n = n->next) {
+    gen(n);
+    // スタックトップに式(expr)の評価結果が残っているはずなので
+    // スタックが溢れないようにポップしておく
+    printf("  pop rax\n");
+  }
+
+  // エピローグ
+  printf("  mov rsp, rbp\n");
+  printf("  pop rbp\n");
+  // 最後の式の値がRAXに残っているのでそれが返り値になる
   printf("  ret\n");
 }

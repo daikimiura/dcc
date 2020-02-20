@@ -22,6 +22,7 @@ extern char *user_input;
 // トークンの種類
 typedef enum {
   TK_RESERVED, // 記号
+  TK_IDENT, // 識別子
   TK_NUM, // 整数
   TK_EOF, // End Of File
 } TokenKind;
@@ -41,6 +42,8 @@ void error(char *fmt, ...);
 void error_at(char *loc, char *fmt, ...);
 
 bool consume(char *op);
+
+Token *consume_ident(void);
 
 bool expect(char *op);
 
@@ -67,6 +70,8 @@ typedef enum {
   ND_NE, // !=
   ND_LT, // <
   ND_LE, // <=
+  ND_ASSIGN, // =
+  ND_LVAR, // ローカル変数
   ND_NUM, // 整数
 } NodeKind;
 
@@ -74,12 +79,14 @@ typedef enum {
 typedef struct Node Node;
 struct Node {
   NodeKind kind; // ノードの型
+  Node *next; // 次のノード(';'区切りで複数の式を書く場合)
   Node *lhs; // 左辺
   Node *rhs; // 右辺
-  int val; // kindがND_NUMの場合、その値(整数)
+  char name; // kindがND_LVARの場合、その変数名
+  int val; // kindがND_NUMの場合、その値
 };
 
-Node *expr(void);
+Node *program(void);
 
 //
 // codegen.c

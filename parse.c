@@ -19,7 +19,20 @@ Node *new_node_num(int val) {
   return node;
 }
 
+Node *new_node_var(char name) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_LVAR;
+  node->name = name;
+  return node;
+}
+
 // 非終端記号を表す関数のプロトタイプ宣言
+Node *stmt();
+
+Node *expr();
+
+Node *assign();
+
 Node *equality();
 
 Node *relational();
@@ -32,9 +45,37 @@ Node *unary();
 
 Node *primary();
 
-// expr = equality
+// program = stmt*
+Node *program() {
+  Node head = {};
+  Node *cur = &head;
+
+  while (!at_eof()) {
+    cur->next = stmt();
+    cur = cur->next;
+  }
+
+  return head.next;
+}
+
+// stmt = expr ";"
+Node *stmt() {
+  Node *node = expr();
+  expect(";");
+  return node;
+}
+
+// expr = assign
 Node *expr() {
+  return assign();
+}
+
+// assign = equality ("=" assign)?
+Node *assign() {
   Node *node = equality();
+
+  if (consume("="))
+    node = new_node(ND_ASSIGN, node, assign());
   return node;
 }
 
@@ -107,12 +148,17 @@ Node *unary() {
   return primary();
 }
 
-// primary = "(" expr ")" | num
+// primary = "(" expr ")" | ident | num
 Node *primary() {
   if (consume("(")) {
     Node *node = expr();
     expect(")");
     return node;
+  }
+
+  Token *tok = consume_ident();
+  if (tok) {
+    return new_node_var(*tok->str);
   }
 
   return new_node_num(expect_number());

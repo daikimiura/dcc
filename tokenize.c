@@ -42,6 +42,16 @@ bool consume(char *op) {
   return true;
 }
 
+// 現在のトークンが識別子(TK_IDENT)の時には、トークンを1つ読み進めて現在のトークンを返す
+// それ以外の場合にはNULLを返す
+Token *consume_ident() {
+  if (token->kind != TK_IDENT)
+    return NULL;
+  Token *t = token;
+  token = token->next;
+  return t;
+}
+
 // 現在のトークンが期待している記号の時には、トークンを1つ読み進めてtrueを返す
 // それ以外の場合はエラーを返す
 bool expect(char *op) {
@@ -98,7 +108,7 @@ Token *tokenize(char *p) {
     }
 
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' ||
-        *p == ')' || *p == '<' || *p == '>') {
+        *p == ')' || *p == '<' || *p == '>' || *p == ';' || *p == '=') {
       cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
@@ -109,6 +119,12 @@ Token *tokenize(char *p) {
       char *q = p;
       cur->val = strtol(p, &p, 10);
       cur->len = p - q;
+      continue;
+    }
+
+    if ('a' <= *p && *p <= 'z') {
+      cur = new_token(TK_IDENT, cur, p++, 1);
+      cur->len = 1;
       continue;
     }
 
