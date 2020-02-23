@@ -37,6 +37,11 @@ void gen(Node *node) {
     case ND_NUM:
       printf("  push %d\n", node->val);
       return;
+    case ND_RETURN:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  jmp .L.return\n");
+      return;
     case ND_LVAR:
       gen_addr(node);
       load();
@@ -128,6 +133,7 @@ void codegen(Node *node) {
   }
 
   // エピローグ
+  printf(".L.return:\n");
   printf("  mov rsp, rbp\n");
   printf("  pop rbp\n");
   // 最後の式の値がRAXに残っているのでそれが返り値になる

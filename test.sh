@@ -47,5 +47,7 @@ try 3 'a=b=c=1;a+b+c;'
 try 6 'foo=6;foo;'
 try 11 'foo=2;bar=9;foo+bar;'
 try 13 'foo1=3;bar2=5;foo1+bar2+5;'
+try 42 'return 42;'
+try 3 'a=1;b=2;return a+b;42;'
 
 echo ok

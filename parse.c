@@ -26,6 +26,13 @@ Node *new_node_lvar(LVar *var) {
   return node;
 }
 
+Node *new_node_return(Node *expr) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_RETURN;
+  node->lhs = expr;
+  return node;
+}
+
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
 LVar *find_lvar(Token *tok) {
@@ -81,8 +88,14 @@ Node *program() {
   return head.next;
 }
 
-// stmt = expr ";"
+// stmt = "return" expr ";" | expr ";"
 Node *stmt() {
+  if (consume("return")) {
+    Node *node = new_node_return(expr());
+    expect(";");
+    return node;
+  }
+
   Node *node = expr();
   expect(";");
   return node;
