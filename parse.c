@@ -19,11 +19,32 @@ Node *new_node_num(int val) {
   return node;
 }
 
-Node *new_node_var(char name) {
+Node *new_node_lvar(LVar *var) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_LVAR;
-  node->name = name;
+  node->lvar = var;
   return node;
+}
+
+// 変数を名前で検索する
+// 見つからなかった場合はNULLを返す
+LVar *find_lvar(Token *tok) {
+  for (LVar *var = locals; var; var = var->next) {
+    if (strlen(var->name) == tok->len && !strncmp(tok->str, var->name, tok->len)) {
+      return var;
+    }
+  }
+  return NULL;
+}
+
+// 新しいローカル変数を連結リストの先頭に追加する
+LVar *new_lvar(char *name) {
+//  printf("new lvar name %s\n", strndup(name, 1));
+  LVar *var = calloc(1, sizeof(LVar));
+  var->next = locals;
+  var->name = name;
+  locals = var;
+  return var;
 }
 
 // 非終端記号を表す関数のプロトタイプ宣言
@@ -47,6 +68,8 @@ Node *primary();
 
 // program = stmt*
 Node *program() {
+  locals = NULL;
+
   Node head = {};
   Node *cur = &head;
 
@@ -158,7 +181,11 @@ Node *primary() {
 
   Token *tok = consume_ident();
   if (tok) {
-    return new_node_var(*tok->str);
+    LVar *lvar = find_lvar(tok);
+    if (!lvar) {
+      lvar = new_lvar(strndup(tok->str, tok->len));
+    }
+    return new_node_lvar(lvar);
   }
 
   return new_node_num(expect_number());

@@ -44,5 +44,8 @@ try 2 'a=2;a;'
 try 8 'a=3;b=5;a+b;'
 try 14 'a=1+2;b=4;(a+b)*2;'
 try 3 'a=b=c=1;a+b+c;'
+try 6 'foo=6;foo;'
+try 11 'foo=2;bar=9;foo+bar;'
+try 13 'foo1=3;bar2=5;foo1+bar2+5;'
 
 echo ok

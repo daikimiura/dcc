@@ -11,9 +11,8 @@ void gen_addr(Node *node) {
   if (node->kind != ND_LVAR)
     error("ローカル変数ではありません");
 
-  int offset = (node->name - 'a' + 1) * 8;
   printf("  mov rax, rbp\n");
-  printf("  sub rax, %d\n", offset);
+  printf("  sub rax, %d\n", node->lvar->offset);
   printf("  push rax\n");
 }
 
@@ -110,8 +109,15 @@ void codegen(Node *node) {
   // プロローグ
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  // 変数26個分(a~z)の領域を確保する
-  printf("  sub rsp, 208\n"); // 26 (文字) * 8 (bytes/文字) = 208 (bytes)
+
+  // ローカル変数にオフセットを割り当てる
+  int offset = 0;
+  for (LVar *var = locals; var; var = var->next) {
+    offset += 8;
+    var->offset = offset;
+  }
+  printf("  sub rsp, %d\n", offset);
+
 
   // 抽象構文木を下りながらコード生成
   for (Node *n = node; n; n = n->next) {

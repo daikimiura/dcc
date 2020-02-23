@@ -37,6 +37,17 @@ struct Token {
   int len; // トークンの長さ
 };
 
+// ローカル変数型
+// 変数は連結リストで表す
+// LVarという構造体で一つの変数を表すことにして、先頭の要素をlocalsというポインタで持つ
+typedef struct LVar LVar;
+struct LVar {
+  LVar *next; // 次の変数かNULL
+  char *name; // 変数の名前
+  int offset; // RBPからのオフセット
+};
+LVar *locals;
+
 void error(char *fmt, ...);
 
 void error_at(char *loc, char *fmt, ...);
@@ -82,7 +93,7 @@ struct Node {
   Node *next; // 次のノード(';'区切りで複数の式を書く場合)
   Node *lhs; // 左辺
   Node *rhs; // 右辺
-  char name; // kindがND_LVARの場合、その変数名
+  LVar *lvar; // kindがND_LVARの場合、その変数
   int val; // kindがND_NUMの場合、その値
 };
 
