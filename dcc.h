@@ -85,6 +85,7 @@ typedef enum {
   ND_LVAR, // ローカル変数
   ND_NUM, // 整数
   ND_RETURN, // return
+  ND_IF, // if
 } NodeKind;
 
 // 抽象構文木のノードの型
@@ -96,6 +97,9 @@ struct Node {
   Node *rhs; // 右辺
   LVar *lvar; // kindがND_LVARの場合、その変数
   int val; // kindがND_NUMの場合、その値
+  Node *cond; // kindがND_IFの場合、その条件式
+  Node *then; // kindがND_IFの場合、条件がtrueの時に評価される式
+  Node *els; // kindがND_IFの場合、条件がfalseの時に評価される式
 };
 
 Node *program(void);

@@ -33,6 +33,12 @@ Node *new_node_return(Node *expr) {
   return node;
 }
 
+Node *new_node_if() {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_IF;
+  return node;
+}
+
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
 LVar *find_lvar(Token *tok) {
@@ -88,11 +94,27 @@ Node *program() {
   return head.next;
 }
 
-// stmt = "return" expr ";" | expr ";"
+// stmt = "return" expr ";"
+//      | "if" "(" expr ")" stmt ( "else" stmt )?
+//      | expr ";"
 Node *stmt() {
   if (consume("return")) {
     Node *node = new_node_return(expr());
     expect(";");
+    return node;
+  }
+
+  if (consume("if")) {
+    Node *node = new_node_if();
+
+    expect("(");
+    node->cond = expr();
+    expect(")");
+    node->then = stmt();
+
+    if (consume("else"))
+      node->els = stmt();
+
     return node;
   }
 
