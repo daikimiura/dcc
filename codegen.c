@@ -75,6 +75,18 @@ void gen(Node *node) {
       }
       return;
     }
+    case ND_WHILE: {
+      int seq = labelseq++;
+      printf(".L.begin.%d:\n", seq);
+      gen(node->cond);
+      printf("  pop rax\n");
+      printf("  cmp rax, 0\n");
+      printf("  je .L.end.%d\n", seq);
+      gen(node->then);
+      printf("  jmp .L.begin.%d\n", seq);
+      printf(".L.end.%d:\n", seq);
+      return;
+    }
     default:;
   }
 
@@ -149,12 +161,8 @@ void codegen(Node *node) {
 
 
   // 抽象構文木を下りながらコード生成
-  for (Node *n = node; n; n = n->next) {
+  for (Node *n = node; n; n = n->next)
     gen(n);
-    // スタックトップに式(expr)の評価結果が残っているはずなので
-    // スタックが溢れないようにポップしておく
-    printf("  pop rax\n");
-  }
 
   // エピローグ
   printf(".L.return:\n");

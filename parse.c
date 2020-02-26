@@ -39,6 +39,12 @@ Node *new_node_if() {
   return node;
 }
 
+Node *new_node_while() {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_WHILE;
+  return node;
+}
+
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
 LVar *find_lvar(Token *tok) {
@@ -96,6 +102,7 @@ Node *program() {
 
 // stmt = "return" expr ";"
 //      | "if" "(" expr ")" stmt ( "else" stmt )?
+//      | "while" "(" expr ")" stmt
 //      | expr ";"
 Node *stmt() {
   if (consume("return")) {
@@ -115,6 +122,16 @@ Node *stmt() {
     if (consume("else"))
       node->els = stmt();
 
+    return node;
+  }
+
+  if (consume("while")) {
+    Node *node = new_node_while();
+
+    expect("(");
+    node->cond = expr();
+    expect(")");
+    node->then = stmt();
     return node;
   }
 
