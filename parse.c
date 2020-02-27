@@ -51,6 +51,12 @@ Node *new_node_for() {
   return node;
 }
 
+Node *new_node_block() {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_BLOCK;
+  return node;
+}
+
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
 LVar *find_lvar(Token *tok) {
@@ -111,6 +117,7 @@ Node *program() {
 //      | "while" "(" expr ")" stmt
 //      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //      | expr ";"
+//      | "{" stmt* "}"
 Node *stmt() {
   if (consume("return")) {
     Node *node = new_node_return(expr());
@@ -162,6 +169,22 @@ Node *stmt() {
     }
 
     node->then = stmt();
+    return node;
+  }
+
+  if (consume("{")) {
+    Node *node = new_node_block();
+
+    // ブロックに含まれるstmtを連結リストで管理
+    Node head = {};
+    Node *cur = &head;
+
+    while (!consume("}")) {
+      cur->next = stmt();
+      cur = cur->next;
+    }
+
+    node->body = head.next;
     return node;
   }
 

@@ -88,6 +88,7 @@ typedef enum {
   ND_IF, // if
   ND_WHILE, // while
   ND_FOR, // for
+  ND_BLOCK, // ブロック { ... }
 } NodeKind;
 
 // 抽象構文木のノードの型
@@ -106,6 +107,9 @@ struct Node {
   Node *els; // kindがND_IFの場合、条件がfalseの時に評価される式
   Node *init; // kindがND_FORの場合、初期値
   Node *inc; // kindがND_FORの場合、ループごとの増分
+
+  // ブロック
+  Node *body; // kindがND_BLOCKの時、ブロックに含まれる式
 };
 
 Node *program(void);
