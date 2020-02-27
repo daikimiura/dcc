@@ -89,6 +89,7 @@ typedef enum {
   ND_WHILE, // while
   ND_FOR, // for
   ND_BLOCK, // ブロック { ... }
+  ND_FUNCALL, // 関数呼び出し
 } NodeKind;
 
 // 抽象構文木のノードの型
@@ -110,6 +111,9 @@ struct Node {
 
   // ブロック
   Node *body; // kindがND_BLOCKの時、ブロックに含まれる式
+
+  // 関数
+  char *funcname; // kindがND_FUNCALLの時、関数名
 };
 
 Node *program(void);

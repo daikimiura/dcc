@@ -57,6 +57,13 @@ Node *new_node_block() {
   return node;
 }
 
+Node *new_node_fun_call(char *funcname) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_FUNCALL;
+  node->funcname = funcname;
+  return node;
+}
+
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
 LVar *find_lvar(Token *tok) {
@@ -276,7 +283,7 @@ Node *unary() {
   return primary();
 }
 
-// primary = "(" expr ")" | ident | num
+// primary = "(" expr ")" | ident ("(" ")")? | num
 Node *primary() {
   if (consume("(")) {
     Node *node = expr();
@@ -286,6 +293,12 @@ Node *primary() {
 
   Token *tok = consume_ident();
   if (tok) {
+    if (consume("(")) {
+      expect(")");
+      Node *node = new_node_fun_call(strndup(tok->str, tok->len));
+      return node;
+    }
+
     LVar *lvar = find_lvar(tok);
     if (!lvar) {
       lvar = new_lvar(strndup(tok->str, tok->len));
