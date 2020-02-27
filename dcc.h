@@ -87,6 +87,7 @@ typedef enum {
   ND_RETURN, // return
   ND_IF, // if
   ND_WHILE, // while
+  ND_FOR, // for
 } NodeKind;
 
 // 抽象構文木のノードの型
@@ -98,9 +99,13 @@ struct Node {
   Node *rhs; // 右辺
   LVar *lvar; // kindがND_LVARの場合、その変数
   int val; // kindがND_NUMの場合、その値
-  Node *cond; // kindがND_IF/ND_WHILEの場合、その条件式
-  Node *then; // kindがND_IF/ND_WHILEの場合、条件がtrueの時に評価される式
+
+  // 制御構文
+  Node *cond; // kindがND_IF/ND_WHILE/ND_FORの場合、その条件式
+  Node *then; // kindがND_IF/ND_WHILE/ND_FORの場合、条件がtrueの時に評価される式
   Node *els; // kindがND_IFの場合、条件がfalseの時に評価される式
+  Node *init; // kindがND_FORの場合、初期値
+  Node *inc; // kindがND_FORの場合、ループごとの増分
 };
 
 Node *program(void);

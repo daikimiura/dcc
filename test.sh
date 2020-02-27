@@ -52,5 +52,9 @@ try 2 'if (1) return 2; return 3;'
 try 2 'if (1==1) return 2; return 3;'
 try 3 'i=0;while(i<3)i=i+1;return i;'
 try 1 'i=1;while(i>2)i=i+1;return i;'
+try 55 'i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j;'
+try 3 'i=2; for(;i>3;i=i+1) return 2; return 3;'
+try 2 'for (;;) return 2; return 3;'
+
 
 echo ok
