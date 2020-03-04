@@ -128,7 +128,23 @@ void gen(Node *node) {
       for (int i = nargs - 1; i >= 0; i--)
         printf("  pop %s\n", argreg[i]);
 
+      // 関数呼び出しをする前にRSPが16の倍数になっていなければいけない(ABIで決まっている)
+      int seq = labelseq++;
+      printf("  mov rax, rsp\n");
+      // 16の倍数だったら下位4ビットは全て0のはず
+      // つまり15との論理和を取ったら0になるはず
+      // 16の倍数じゃなかったらRSPに8から引く(RSPは必ず8の倍数か16の倍数になる)
+      printf("  and rax, 15\n");
+      printf("  jne .L.call.%d\n", seq);
+      printf("  mov rax, 0\n");
       printf("  call _%s\n", node->funcname);
+      printf("  jmp .L.end.%d\n", seq);
+      printf(".L.call.%d:\n", seq);
+      printf("  sub rsp, 8\n");
+      printf("  mov rax, 0\n");
+      printf("  call _%s\n", node->funcname);
+      printf("  add rsp, 8\n"); // 引いた分を戻す
+      printf(".L.end.%d:\n", seq);
       printf("  push rax\n");
       return;
     }
