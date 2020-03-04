@@ -7,6 +7,10 @@
 // アセンブリのラベル番号(連番)
 static int labelseq = 1;
 
+// 関数の引数を保持するためのレジスタ
+// x86_64のABI(Application Binary Interface)で決まっている
+static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
 // 与えられたノードが変数を指しているときに、その変数のアドレスを計算して、それをスタックにプッシュし
 // それ以外の場合にはエラーを返す
 void gen_addr(Node *node) {
@@ -114,10 +118,20 @@ void gen(Node *node) {
       for (Node *n = node->body; n; n = n->next)
         gen(n);
       return;
-    case ND_FUNCALL:
+    case ND_FUNCALL: {
+      int nargs = 0; // 引数の個数
+      for (Node *arg = node->args; arg; arg = arg->next) {
+        gen(arg);
+        nargs++;
+      }
+
+      for (int i = nargs - 1; i >= 0; i--)
+        printf("  pop %s\n", argreg[i]);
+
       printf("  call _%s\n", node->funcname);
       printf("  push rax\n");
       return;
+    }
     default:;
   }
 

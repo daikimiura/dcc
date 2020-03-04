@@ -4,6 +4,25 @@
 
 #include "dcc.h"
 
+// 非終端記号を表す関数のプロトタイプ宣言
+Node *stmt();
+
+Node *expr();
+
+Node *assign();
+
+Node *equality();
+
+Node *relational();
+
+Node *add();
+
+Node *mul();
+
+Node *unary();
+
+Node *primary();
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
@@ -57,10 +76,27 @@ Node *new_node_block() {
   return node;
 }
 
+// funcargs = "(" (assign ("," assign)*)? ")"
+Node *funcargs() {
+  if (consume(")"))
+    return NULL;
+
+  // 連結リストで引数を管理
+  Node *head = assign();
+  Node *cur = head;
+  while (consume(",")) {
+    cur->next = assign();
+    cur = cur->next;
+  }
+  expect(")");
+  return head;
+}
+
 Node *new_node_fun_call(char *funcname) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_FUNCALL;
   node->funcname = funcname;
+  node->args = funcargs();
   return node;
 }
 
@@ -84,25 +120,6 @@ LVar *new_lvar(char *name) {
   locals = var;
   return var;
 }
-
-// 非終端記号を表す関数のプロトタイプ宣言
-Node *stmt();
-
-Node *expr();
-
-Node *assign();
-
-Node *equality();
-
-Node *relational();
-
-Node *add();
-
-Node *mul();
-
-Node *unary();
-
-Node *primary();
 
 // program = stmt*
 Node *program() {
@@ -283,7 +300,7 @@ Node *unary() {
   return primary();
 }
 
-// primary = "(" expr ")" | ident ("(" ")")? | num
+// primary = "(" expr ")" | ident func-args? | num
 Node *primary() {
   if (consume("(")) {
     Node *node = expr();
@@ -294,7 +311,6 @@ Node *primary() {
   Token *tok = consume_ident();
   if (tok) {
     if (consume("(")) {
-      expect(")");
       Node *node = new_node_fun_call(strndup(tok->str, tok->len));
       return node;
     }

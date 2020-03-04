@@ -96,7 +96,7 @@ typedef enum {
 typedef struct Node Node;
 struct Node {
   NodeKind kind; // ノードの型
-  Node *next; // 次のノード(';'区切りで複数の式を書く場合)
+  Node *next; // 次のノード(';'区切りで複数の式を書く場合 or 関数の引数)
   Node *lhs; // 左辺
   Node *rhs; // 右辺
   LVar *lvar; // kindがND_LVARの場合、その変数
@@ -114,6 +114,7 @@ struct Node {
 
   // 関数
   char *funcname; // kindがND_FUNCALLの時、関数名
+  Node *args; // kindがND_FUNCALLの時、引数
 };
 
 Node *program(void);
