@@ -60,6 +60,8 @@ bool expect(char *op);
 
 int expect_number(void);
 
+char *expect_ident(void);
+
 bool at_eof(void);
 
 Token *tokenize(char *p);
@@ -117,12 +119,21 @@ struct Node {
   Node *args; // kindがND_FUNCALLの時、引数
 };
 
-Node *program(void);
+typedef struct Function Function;
+struct Function {
+  Function *next; // 次に実行する関数を連結リストで管理
+  char *name; // 関数名
+  Node *node; // 関数のブロック部分(実際の処理)
+  LVar *locals; // 関数の引数
+  int stack_size; // 引数の個数 * 8 (関数呼び出し時にに下げるスタックの大きさ)
+};
+
+Function *program(void);
 
 //
 // codegen.c
 //
 
-void codegen(Node *node);
+void codegen(Function *prog);
 
 #endif //DCC_DCC_H

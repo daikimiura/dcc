@@ -7,6 +7,9 @@
 // アセンブリのラベル番号(連番)
 static int labelseq = 1;
 
+// 実行中の関数の名前
+static char *funcname;
+
 // 関数の引数を保持するためのレジスタ
 // x86_64のABI(Application Binary Interface)で決まっている
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
@@ -46,7 +49,7 @@ void gen(Node *node) {
     case ND_RETURN:
       gen(node->lhs);
       printf("  pop rax\n");
-      printf("  jmp .L.return\n");
+      printf("  jmp .L.return.%s\n", funcname);
       return;
     case ND_LVAR:
       gen_addr(node);
@@ -202,33 +205,28 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
-void codegen(Node *node) {
+void codegen(Function *prog) {
   // アセンブリの前半部分を出力
   printf(".intel_syntax noprefix\n");
-  printf(".global _main\n");
-  printf("_main:\n");
 
-  // プロローグ
-  printf("  push rbp\n");
-  printf("  mov rbp, rsp\n");
+  for (Function *fn = prog; fn; fn = fn->next) {
+    funcname = fn->name;
+    printf(".global _%s\n", funcname);
+    printf("_%s:\n", funcname);
 
-  // ローカル変数にオフセットを割り当てる
-  int offset = 0;
-  for (LVar *var = locals; var; var = var->next) {
-    offset += 8;
-    var->offset = offset;
+    // プロローグ
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, %d\n", fn->stack_size);
+
+    for (Node *n = fn->node; n; n = n->next)
+      gen(n);
+
+    // エピローグ
+    printf(".L.return.%s:\n", funcname);
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
+    // 最後の式の値がRAXに残っているのでそれが返り値になる
+    printf("  ret\n");
   }
-  printf("  sub rsp, %d\n", offset);
-
-
-  // 抽象構文木を下りながらコード生成
-  for (Node *n = node; n; n = n->next)
-    gen(n);
-
-  // エピローグ
-  printf(".L.return:\n");
-  printf("  mov rsp, rbp\n");
-  printf("  pop rbp\n");
-  // 最後の式の値がRAXに残っているのでそれが返り値になる
-  printf("  ret\n");
 }

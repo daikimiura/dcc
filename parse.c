@@ -5,6 +5,10 @@
 #include "dcc.h"
 
 // 非終端記号を表す関数のプロトタイプ宣言
+Function *program();
+
+Function *function();
+
 Node *stmt();
 
 Node *expr();
@@ -121,19 +125,44 @@ LVar *new_lvar(char *name) {
   return var;
 }
 
-// program = stmt*
-Node *program() {
+// program = function*
+Function *program() {
   locals = NULL;
 
-  Node head = {};
-  Node *cur = &head;
+  Function head = {};
+  Function *cur = &head;
 
   while (!at_eof()) {
-    cur->next = stmt();
+    cur->next = function();
     cur = cur->next;
   }
 
   return head.next;
+}
+
+// function = ident "(" ")" "{" stmt* "}"
+Function *function() {
+  locals = NULL;
+
+  char *name = expect_ident();
+  expect("(");
+  expect(")");
+  expect("{");
+
+  // stmtを連結リストで管理
+  Node head = {};
+  Node *cur = &head;
+
+  while (!consume("}")) {
+    cur->next = stmt();
+    cur = cur->next;
+  }
+
+  Function *fn = calloc(1, sizeof(Function));
+  fn->name = name;
+  fn->node = head.next;
+  fn->locals = locals;
+  return fn;
 }
 
 // stmt = "return" expr ";"
