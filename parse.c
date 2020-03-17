@@ -4,6 +4,8 @@
 
 #include "dcc.h"
 
+LVarList *locals;
+
 // 非終端記号を表す関数のプロトタイプ宣言
 Function *program();
 
@@ -107,22 +109,43 @@ Node *new_node_fun_call(char *funcname) {
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
 LVar *find_lvar(Token *tok) {
-  for (LVar *var = locals; var; var = var->next) {
-    if (strlen(var->name) == tok->len && !strncmp(tok->str, var->name, tok->len)) {
-      return var;
+  for (LVarList *vl = locals; vl; vl = vl->next) {
+    LVar *lvar = vl->lvar;
+    if (strlen(lvar->name) == tok->len && !strncmp(tok->str, lvar->name, tok->len)) {
+      return lvar;
     }
   }
   return NULL;
 }
 
-// 新しいローカル変数を連結リストの先頭に追加する
+// 新しいローカル変数(LVar)を連結リスト(LVarListのリスト)の先頭に追加する
 LVar *new_lvar(char *name) {
-//  printf("new lvar name %s\n", strndup(name, 1));
-  LVar *var = calloc(1, sizeof(LVar));
-  var->next = locals;
-  var->name = name;
-  locals = var;
-  return var;
+  LVar *lvar = calloc(1, sizeof(LVar));
+  lvar->name = name;
+
+  LVarList *vl = calloc(1, sizeof(LVarList));
+  vl->lvar = lvar;
+  vl->next = locals;
+  locals = vl;
+  return lvar;
+}
+
+LVarList *read_func_params() {
+  if (consume(")"))
+    return NULL;
+
+  LVarList *head = calloc(1, sizeof(LVarList));
+  head->lvar = new_lvar(expect_ident());
+  LVarList *cur = head;
+
+  while (!consume(")")) {
+    expect(",");
+    cur->next = calloc(1, sizeof(LVarList));
+    cur->next->lvar = new_lvar(expect_ident());
+    cur = cur->next;
+  }
+
+  return head;
 }
 
 // program = function*
@@ -140,13 +163,16 @@ Function *program() {
   return head.next;
 }
 
-// function = ident "(" ")" "{" stmt* "}"
+// function = ident "(" params? ")" "{" stmt* "}"
+// params = ident ("," ident)*
 Function *function() {
   locals = NULL;
 
-  char *name = expect_ident();
+  Function *fn = calloc(1, sizeof(Function));
+  fn->name = expect_ident();
+
   expect("(");
-  expect(")");
+  fn->params = read_func_params();
   expect("{");
 
   // stmtを連結リストで管理
@@ -158,8 +184,6 @@ Function *function() {
     cur = cur->next;
   }
 
-  Function *fn = calloc(1, sizeof(Function));
-  fn->name = name;
   fn->node = head.next;
   fn->locals = locals;
   return fn;

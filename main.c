@@ -19,9 +19,9 @@ int main(int argc, char **argv) {
   // 関数ごとにローカル変数にオフセットを割り当てる
   for (Function *fn = prog; fn; fn = fn->next) {
     int offset = 0;
-    for (LVar *var = prog->locals; var; var = var->next) {
+    for (LVarList *vl = fn->locals; vl; vl = vl->next) {
       offset += 8;
-      var->offset = offset;
+      vl->lvar->offset = offset;
     }
     fn->stack_size = offset;
   }

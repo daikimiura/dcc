@@ -74,5 +74,6 @@ try 8 'main() { return add(3, 5);}'
 try 2 'main() { return sub(5, 3);}'
 try 21 'main() { return add6(1,2,3,4,5,6);}'
 try 5 'foo(){return 5;} main() { return foo();}'
+try 8 'main() { return fib(5); } fib(x) { if(x<2){return 1;}else{return fib(x-1) + fib(x-2);} }'
 
 echo ok

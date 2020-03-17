@@ -38,15 +38,20 @@ struct Token {
 };
 
 // ローカル変数型
-// 変数は連結リストで表す
 // LVarという構造体で一つの変数を表すことにして、先頭の要素をlocalsというポインタで持つ
 typedef struct LVar LVar;
 struct LVar {
-  LVar *next; // 次の変数かNULL
   char *name; // 変数の名前
   int offset; // RBPからのオフセット
 };
-LVar *locals;
+
+// ローカル変数のリスト
+// 連結リストで管理する
+typedef struct LVarList LVarList;
+struct LVarList {
+  LVarList *next;
+  LVar *lvar;
+};
 
 void error(char *fmt, ...);
 
@@ -124,7 +129,8 @@ struct Function {
   Function *next; // 次に実行する関数を連結リストで管理
   char *name; // 関数名
   Node *node; // 関数のブロック部分(実際の処理)
-  LVar *locals; // 関数の引数
+  LVarList *locals; // ローカル変数
+  LVarList *params; // 引数
   int stack_size; // 引数の個数 * 8 (関数呼び出し時にに下げるスタックの大きさ)
 };
 

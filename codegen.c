@@ -219,6 +219,14 @@ void codegen(Function *prog) {
     printf("  mov rbp, rsp\n");
     printf("  sub rsp, %d\n", fn->stack_size);
 
+    // ABIで指定されたレジスタに格納されている関数の引数の値を
+    // ローカル変数のためのスタック上の領域に書き出す
+    int i = 0;
+    for (LVarList *vl = fn->params; vl; vl = vl->next) {
+      LVar *lvar = vl->lvar;
+      printf("  mov[rbp-%d], %s\n", lvar->offset, argreg[i++]);
+    }
+
     for (Node *n = fn->node; n; n = n->next)
       gen(n);
 
