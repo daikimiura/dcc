@@ -31,15 +31,16 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-// 現在のトークンが期待している記号の時には、トークンを1つ読み進めてtrueを返す
-// それ以外の場合にはfalseを返す
+// 現在のトークンが期待している記号の時には、トークンを1つ読み進めて現在のトークンを返す
+// それ以外の場合にはNULLを返す
 bool consume(char *op) {
   if (token->kind != TK_RESERVED ||
       strlen(op) != token->len ||
       memcmp(token->str, op, token->len))
-    return false;
+    return NULL;
+  Token *t = token;
   token = token->next;
-  return true;
+  return t;
 }
 
 // 現在のトークンが識別子(TK_IDENT)の時には、トークンを1つ読み進めて現在のトークンを返す
@@ -163,7 +164,7 @@ Token *tokenize(char *p) {
 
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' ||
         *p == ')' || *p == '<' || *p == '>' || *p == ';' || *p == '=' ||
-        *p == '}' || *p == '{' || *p == ',') {
+        *p == '}' || *p == '{' || *p == ',' || *p == '&') {
       cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }

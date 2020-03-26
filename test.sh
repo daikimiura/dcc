@@ -75,5 +75,12 @@ try 2 'main() { return sub(5, 3);}'
 try 21 'main() { return add6(1,2,3,4,5,6);}'
 try 5 'foo(){return 5;} main() { return foo();}'
 try 8 'main() { return fib(5); } fib(x) { if(x<2){return 1;}else{return fib(x-1) + fib(x-2);} }'
+try 3 'main() { x=3; return *&x; }'
+try 3 'main() { x=3; y=&x; z=&y; return **z; }'
+try 5 'main() { x=3; y=5; return *(&x+8); }'
+try 3 'main() { x=3; y=5; return *(&y-8); }'
+try 5 'main() { x=3; y=&x; *y=5; return x; }'
+try 7 'main() { x=3; y=5; *(&x+8)=7; return y; }'
+try 7 'main() { x=3; y=5; *(&y-8)=7; return x; }'
 
 echo ok

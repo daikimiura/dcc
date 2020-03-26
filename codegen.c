@@ -4,6 +4,8 @@
 
 #include "dcc.h"
 
+static void gen(Node *node);
+
 // アセンブリのラベル番号(連番)
 static int labelseq = 1;
 
@@ -14,15 +16,25 @@ static char *funcname;
 // x86_64のABI(Application Binary Interface)で決まっている
 static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
-// 与えられたノードが変数を指しているときに、その変数のアドレスを計算して、それをスタックにプッシュし
+// 与えられたノードが変数を指しているときに、その変数のアドレスを計算して、それをスタックにプッシュする
+// `x=3; y=&x; *y=5;` のような場合、`*y=5;`を評価する時にND_ASSIGNからこの関数が呼ばれ、node->kindがND_DEREFとなる。
+// この時yの値はアドレスを表す整数であるとみなしてよいので、yの値を評価すればよい。
+// yの値load()時にすでにスタックにpushされている。
+//
 // それ以外の場合にはエラーを返す
 void gen_addr(Node *node) {
-  if (node->kind != ND_LVAR)
-    error("ローカル変数ではありません");
-
-  printf("  mov rax, rbp\n");
-  printf("  sub rax, %d\n", node->lvar->offset);
-  printf("  push rax\n");
+  switch (node->kind) {
+    case ND_LVAR:
+      printf("  mov rax, rbp\n");
+      printf("  sub rax, %d\n", node->lvar->offset);
+      printf("  push rax\n");
+      return;
+    case ND_DEREF:
+      gen(node->lhs);
+      return;
+    default:
+      error("ローカル変数ではありません");
+  }
 }
 
 // スタックからポップしたアドレスから値をロードし、スタックにプッシュする
@@ -151,6 +163,13 @@ void gen(Node *node) {
       printf("  push rax\n");
       return;
     }
+    case ND_ADDR:
+      gen_addr(node->lhs);
+      return;
+    case ND_DEREF:
+      gen(node->lhs);
+      load();
+      return;
     default:;
   }
 

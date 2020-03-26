@@ -44,6 +44,13 @@ Node *new_node_num(int val) {
   return node;
 }
 
+Node *new_node_unary(NodeKind kind, Node *expr) {
+  Node *node =  calloc(1, sizeof(Node));
+  node->kind = kind;
+  node ->lhs = expr;
+  return node;
+}
+
 Node *new_node_lvar(LVar *var) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_LVAR;
@@ -345,11 +352,17 @@ Node *mul() {
 }
 
 // unary = ("+" | "-")? primary
+//       | ("*" | "&") unary
 Node *unary() {
+  Token *t;
   if (consume("+"))
     return primary();
   if (consume("-"))
     return new_node(ND_SUB, new_node_num(0), primary());
+  if(consume("*"))
+    return new_node_unary(ND_DEREF, unary());
+  if(consume("&"))
+    return new_node_unary(ND_ADDR, unary());
   return primary();
 }
 
