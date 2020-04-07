@@ -18,8 +18,8 @@ static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 // 与えられたノードが変数を指しているときに、その変数のアドレスを計算して、それをスタックにプッシュする
 // `x=3; y=&x; *y=5;` のような場合、`*y=5;`を評価する時にND_ASSIGNからこの関数が呼ばれ、node->kindがND_DEREFとなる。
-// この時yの値はアドレスを表す整数であるとみなしてよいので、yの値を評価すればよい。
-// yの値load()時にすでにスタックにpushされている。
+// この時yの値はアドレスを表す整数であるとみなしてよいので、yの値を右辺値として評価すればよい。
+// yを右辺値として評価した値はload()時にすでにスタックにpushされている。
 //
 // それ以外の場合にはエラーを返す
 void gen_addr(Node *node) {
@@ -176,15 +176,29 @@ void gen(Node *node) {
   gen(node->lhs);
   gen(node->rhs);
 
-  printf("  pop rdi\n");
-  printf("  pop rax\n");
+  printf("  pop rdi\n"); // rhs
+  printf("  pop rax\n"); // lhs
 
   switch (node->kind) {
     case ND_ADD:
       printf("  add rax, rdi\n");
       break;
+    case ND_PTR_ADD:
+      printf("  imul rdi, 8\n");
+      printf("  add rax, rdi\n"); // raxに入ってるのはアドレス
+      break;
     case ND_SUB:
       printf("  sub rax, rdi\n");
+      break;
+    case ND_PTR_SUB:
+      printf("  imul rdi, 8\n");
+      printf("  sub rax, rdi\n");
+      break;
+    case ND_PTR_DIFF:
+      printf("  sub rax, rdi\n");
+      printf("  cqo\n");
+      printf("  mov rdi, 8\n");
+      printf("  idiv rdi\n"); // idivは暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、それを引数のレジスタの64ビットの値で割り、商をRAXに、余りをRDXにセットする
       break;
     case ND_MUL:
       printf("  imul rax, rdi\n");

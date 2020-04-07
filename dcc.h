@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct Type Type;
+
 // 入力プログラム
 extern char *user_input;
 
@@ -80,8 +82,11 @@ extern Token *token;
 
 // 抽象構文木のノードの種類
 typedef enum {
-  ND_ADD, // +
-  ND_SUB, // -
+  ND_ADD, // num + num
+  ND_PTR_ADD, // ptr + num, num + ptr
+  ND_SUB, // num - num
+  ND_PTR_SUB, // ptr - num
+  ND_PTR_DIFF, // ptr - ptr
   ND_MUL, // *
   ND_DIV, // /
   ND_EQ, // ==
@@ -104,8 +109,9 @@ typedef enum {
 // 抽象構文木のノードの型
 typedef struct Node Node;
 struct Node {
-  NodeKind kind; // ノードの型
+  NodeKind kind; // ノードの種類
   Node *next; // 次のノード(';'区切りで複数の式を書く場合 or 関数の引数)
+  Type *ty; // ノードの型(Type)
   Node *lhs; // 左辺
   Node *rhs; // 右辺
   LVar *lvar; // kindがND_LVARの場合、その変数
@@ -143,5 +149,20 @@ Function *program(void);
 //
 
 void codegen(Function *prog);
+
+//
+// type.c
+//
+
+typedef enum {TY_INT, TY_PTR} TypeKind;
+
+struct Type {
+  TypeKind kind;
+  Type *ptr_to; // kindがTY_PTRの時、指しているTypeオブジェクトへのポインタ
+};
+
+bool is_integer(Type *ty);
+void add_type(Node *node);
+
 
 #endif //DCC_DCC_H

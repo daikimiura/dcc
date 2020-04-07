@@ -13,6 +13,8 @@ Function *function();
 
 Node *stmt();
 
+Node *stmt2();
+
 Node *expr();
 
 Node *assign();
@@ -45,9 +47,9 @@ Node *new_node_num(int val) {
 }
 
 Node *new_node_unary(NodeKind kind, Node *expr) {
-  Node *node =  calloc(1, sizeof(Node));
+  Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
-  node ->lhs = expr;
+  node->lhs = expr;
   return node;
 }
 
@@ -87,6 +89,30 @@ Node *new_node_block() {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_BLOCK;
   return node;
+}
+
+Node *new_node_add(Node *lhs, Node *rhs) {
+  add_type(lhs);
+  add_type(rhs);
+  if (is_integer(lhs->ty) && is_integer(rhs->ty)) // num + num
+    return new_node(ND_ADD, lhs, rhs);
+  if (lhs->ty->ptr_to && is_integer(rhs->ty)) // ptr + num
+    return new_node(ND_PTR_ADD, lhs, rhs);
+  if (is_integer(lhs->ty) && rhs->ty->ptr_to) // num + ptr
+    return new_node(ND_PTR_ADD, rhs, lhs);
+  error("`+` の左辺値と右辺値のどちらか、もしくは両方が不適です");
+}
+
+Node *new_node_sub(Node *lhs, Node *rhs) {
+  add_type(lhs);
+  add_type(rhs);
+  if (is_integer(lhs->ty) && is_integer(rhs->ty)) // num - num
+    return new_node(ND_SUB, lhs, rhs);
+  if (lhs->ty->ptr_to && is_integer(rhs->ty)) // ptr - num
+    return new_node(ND_PTR_SUB, lhs, rhs);
+  if (lhs->ty->ptr_to && rhs->ty->ptr_to) // ptr - ptr
+    return new_node(ND_PTR_DIFF, lhs, rhs);
+  error("`-` の左辺値と右辺値のどちらか、もしくは両方が不適です");
 }
 
 // funcargs = "(" (assign ("," assign)*)? ")"
@@ -196,13 +222,20 @@ Function *function() {
   return fn;
 }
 
+// stmtの中身をトラバースして型をつける
+Node *stmt(void) {
+  Node *node = stmt2();
+  add_type(node);
+  return node;
+}
+
 // stmt = "return" expr ";"
 //      | "if" "(" expr ")" stmt ( "else" stmt )?
 //      | "while" "(" expr ")" stmt
 //      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //      | expr ";"
 //      | "{" stmt* "}"
-Node *stmt() {
+Node *stmt2() {
   if (consume("return")) {
     Node *node = new_node_return(expr());
     expect(";");
@@ -329,9 +362,9 @@ Node *add() {
 
   for (;;) {
     if (consume("+"))
-      node = new_node(ND_ADD, node, mul());
+      node = new_node_add(node, mul());
     else if (consume("-"))
-      node = new_node(ND_SUB, node, mul());
+      node = new_node_sub(node, mul());
     else
       return node;
   }
@@ -359,9 +392,9 @@ Node *unary() {
     return primary();
   if (consume("-"))
     return new_node(ND_SUB, new_node_num(0), primary());
-  if(consume("*"))
+  if (consume("*"))
     return new_node_unary(ND_DEREF, unary());
-  if(consume("&"))
+  if (consume("&"))
     return new_node_unary(ND_ADDR, unary());
   return primary();
 }
