@@ -31,12 +31,20 @@ void error_at(char *loc, char *fmt, ...) {
   exit(1);
 }
 
-// 現在のトークンが期待している記号の時には、トークンを1つ読み進めて現在のトークンを返す
-// それ以外の場合にはNULLを返す
-bool consume(char *op) {
+// 現在のトークンが期待している記号の時には、現在のトークンを返す
+// そうでない場合はNULLを返す
+Token *peek(char *op) {
   if (token->kind != TK_RESERVED ||
       strlen(op) != token->len ||
       memcmp(token->str, op, token->len))
+    return NULL;
+  return token;
+}
+
+// 現在のトークンが期待している記号の時には、トークンを1つ読み進めて現在のトークンを返す
+// それ以外の場合にはNULLを返す
+bool consume(char *op) {
+  if (!peek(op))
     return NULL;
   Token *t = token;
   token = token->next;
@@ -144,6 +152,12 @@ Token *tokenize(char *p) {
     if (strncmp(p, "else", 4) == 0 && !is_alnum(p[4])) {
       cur = new_token(TK_RESERVED, cur, p, 4);
       p += 4;
+      continue;
+    }
+
+    if (strncmp(p, "int", 3) == 0 && !is_alnum(p[3])) {
+      cur = new_token(TK_RESERVED, cur, p, 3);
+      p += 3;
       continue;
     }
 

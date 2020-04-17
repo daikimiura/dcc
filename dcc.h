@@ -61,6 +61,8 @@ void error_at(char *loc, char *fmt, ...);
 
 bool consume(char *op);
 
+Token *peek(char *op);
+
 Token *consume_ident(void);
 
 bool expect(char *op);
@@ -104,6 +106,7 @@ typedef enum {
   ND_FOR, // for
   ND_BLOCK, // ブロック { ... }
   ND_FUNCALL, // 関数呼び出し
+  ND_NULL,
 } NodeKind;
 
 // 抽象構文木のノードの型
@@ -162,7 +165,8 @@ struct Type {
 };
 
 bool is_integer(Type *ty);
+Type *pointer_to(Type *ptr_to);
 void add_type(Node *node);
-
+Type *int_type;
 
 #endif //DCC_DCC_H

@@ -55,6 +55,8 @@ void store() {
 
 void gen(Node *node) {
   switch (node->kind) {
+    case ND_NULL:
+      return;
     case ND_NUM:
       printf("  push %d\n", node->val);
       return;
@@ -198,7 +200,8 @@ void gen(Node *node) {
       printf("  sub rax, rdi\n");
       printf("  cqo\n");
       printf("  mov rdi, 8\n");
-      printf("  idiv rdi\n"); // idivは暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、それを引数のレジスタの64ビットの値で割り、商をRAXに、余りをRDXにセットする
+      printf(
+          "  idiv rdi\n"); // idivは暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、それを引数のレジスタの64ビットの値で割り、商をRAXに、余りをRDXにセットする
       break;
     case ND_MUL:
       printf("  imul rax, rdi\n");

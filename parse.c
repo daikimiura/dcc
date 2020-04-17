@@ -9,7 +9,12 @@ LVarList *locals;
 // 非終端記号を表す関数のプロトタイプ宣言
 Function *program();
 
+
 Function *function();
+
+Node *declaration();
+
+Type *basetype();
 
 Node *stmt();
 
@@ -115,6 +120,12 @@ Node *new_node_sub(Node *lhs, Node *rhs) {
   error("`-` の左辺値と右辺値のどちらか、もしくは両方が不適です");
 }
 
+Node *new_node_null() {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_NULL;
+  return node;
+}
+
 // funcargs = "(" (assign ("," assign)*)? ")"
 Node *funcargs() {
   if (consume(")"))
@@ -163,18 +174,23 @@ LVar *new_lvar(char *name) {
   return lvar;
 }
 
+LVarList *read_func_param() {
+  LVarList *vl = calloc(1, sizeof(LVarList));
+  Type *ty = basetype();
+  vl->lvar = new_lvar(expect_ident());
+  return vl;
+}
+
 LVarList *read_func_params() {
   if (consume(")"))
     return NULL;
 
-  LVarList *head = calloc(1, sizeof(LVarList));
-  head->lvar = new_lvar(expect_ident());
+  LVarList *head = read_func_param();
   LVarList *cur = head;
 
   while (!consume(")")) {
     expect(",");
-    cur->next = calloc(1, sizeof(LVarList));
-    cur->next->lvar = new_lvar(expect_ident());
+    cur->next = read_func_param();
     cur = cur->next;
   }
 
@@ -196,14 +212,16 @@ Function *program() {
   return head.next;
 }
 
-// function = ident "(" params? ")" "{" stmt* "}"
-// params = ident ("," ident)*
+// function = basetype ident "(" params? ")" "{" stmt* "}"
+// params = param ("," param)*
+// param = basetype ident
 Function *function() {
   locals = NULL;
 
   Function *fn = calloc(1, sizeof(Function));
-  fn->name = expect_ident();
 
+  basetype();
+  fn->name = expect_ident();
   expect("(");
   fn->params = read_func_params();
   expect("{");
@@ -222,6 +240,16 @@ Function *function() {
   return fn;
 }
 
+// 現時点ではint型とポインタ型のみ
+// basetype = "int" "*"*
+Type *basetype() {
+  expect("int");
+  Type *ty = int_type;
+  while (consume("*"))
+    ty = pointer_to(ty);
+  return ty;
+}
+
 // stmtの中身をトラバースして型をつける
 Node *stmt(void) {
   Node *node = stmt2();
@@ -235,6 +263,7 @@ Node *stmt(void) {
 //      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //      | expr ";"
 //      | "{" stmt* "}"
+//      | declaration
 Node *stmt2() {
   if (consume("return")) {
     Node *node = new_node_return(expr());
@@ -305,7 +334,26 @@ Node *stmt2() {
     return node;
   }
 
+  if (peek("int"))
+    return declaration();
+
   Node *node = expr();
+  expect(";");
+  return node;
+}
+
+// declaration = basetype ident ("=" expr) ";"
+Node *declaration() {
+  Type *ty = basetype();
+  LVar *var = new_lvar(expect_ident());
+
+  if (consume(";"))
+    return new_node_null();
+
+  expect("=");
+  Node *lhs = new_node_lvar(var);
+  Node *rhs = expr();
+  Node *node = new_node(ND_ASSIGN, lhs, rhs);
   expect(";");
   return node;
 }
