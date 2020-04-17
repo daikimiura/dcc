@@ -44,6 +44,7 @@ struct Token {
 typedef struct LVar LVar;
 struct LVar {
   char *name; // 変数の名前
+  Type *ty;
   int offset; // RBPからのオフセット
 };
 
@@ -157,16 +158,19 @@ void codegen(Function *prog);
 // type.c
 //
 
-typedef enum {TY_INT, TY_PTR} TypeKind;
+typedef enum {TY_INT, TY_PTR, TY_ARRAY} TypeKind;
 
 struct Type {
   TypeKind kind;
+  int size; // sizeof()の値
   Type *ptr_to; // kindがTY_PTRの時、指しているTypeオブジェクトへのポインタ
+  int array_len; // kindがTY_ARRAYの時、配列の長さ
 };
 
 bool is_integer(Type *ty);
 Type *pointer_to(Type *ptr_to);
 void add_type(Node *node);
 Type *int_type;
+Type *array_of(Type *pointer_to, int size);
 
 #endif //DCC_DCC_H

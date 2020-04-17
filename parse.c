@@ -163,9 +163,10 @@ LVar *find_lvar(Token *tok) {
 }
 
 // 新しいローカル変数(LVar)を連結リスト(LVarListのリスト)の先頭に追加する
-LVar *new_lvar(char *name) {
+LVar *new_lvar(char *name, Type *ty) {
   LVar *lvar = calloc(1, sizeof(LVar));
   lvar->name = name;
+  lvar->ty = ty;
 
   LVarList *vl = calloc(1, sizeof(LVarList));
   vl->lvar = lvar;
@@ -174,10 +175,20 @@ LVar *new_lvar(char *name) {
   return lvar;
 }
 
+// 配列宣言時の型を読み取る
+Type *read_type_suffix(Type *ptr_to) {
+  if (!consume("["))
+    return ptr_to;
+  int size = expect_number();
+  expect("]");
+  return array_of(ptr_to, size);
+}
+
 LVarList *read_func_param() {
-  LVarList *vl = calloc(1, sizeof(LVarList));
   Type *ty = basetype();
-  vl->lvar = new_lvar(expect_ident());
+  char *name = expect_ident();
+  LVarList *vl = calloc(1, sizeof(LVarList));
+  vl->lvar = new_lvar(name, ty);
   return vl;
 }
 
@@ -245,8 +256,9 @@ Function *function() {
 Type *basetype() {
   expect("int");
   Type *ty = int_type;
-  while (consume("*"))
+  while (consume("*")) {
     ty = pointer_to(ty);
+  }
   return ty;
 }
 
@@ -342,16 +354,19 @@ Node *stmt2() {
   return node;
 }
 
-// declaration = basetype ident ("=" expr) ";"
+// declaration = basetype ident ("[" num "]")* ("=" expr) ";"
 Node *declaration() {
   Type *ty = basetype();
-  LVar *var = new_lvar(expect_ident());
+
+  char *name = expect_ident();
+  ty = read_type_suffix(ty);
+  LVar *lvar = new_lvar(name, ty);
 
   if (consume(";"))
     return new_node_null();
 
   expect("=");
-  Node *lhs = new_node_lvar(var);
+  Node *lhs = new_node_lvar(lvar);
   Node *rhs = expr();
   Node *node = new_node(ND_ASSIGN, lhs, rhs);
   expect(";");
@@ -464,7 +479,7 @@ Node *primary() {
 
     LVar *lvar = find_lvar(tok);
     if (!lvar) {
-      lvar = new_lvar(strndup(tok->str, tok->len));
+      error("undefined variable");
     }
     return new_node_lvar(lvar);
   }

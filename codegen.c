@@ -67,7 +67,8 @@ void gen(Node *node) {
       return;
     case ND_LVAR:
       gen_addr(node);
-      load();
+      if (node->ty->kind != TY_ARRAY)
+        load();
       return;
     case ND_ASSIGN:
       gen_addr(node->lhs);
@@ -170,7 +171,8 @@ void gen(Node *node) {
       return;
     case ND_DEREF:
       gen(node->lhs);
-      load();
+      if (node->ty->kind != TY_ARRAY)
+        load();
       return;
     default:;
   }
@@ -186,20 +188,20 @@ void gen(Node *node) {
       printf("  add rax, rdi\n");
       break;
     case ND_PTR_ADD:
-      printf("  imul rdi, 8\n");
+      printf("  imul rdi, %d\n", node->ty->ptr_to->size);
       printf("  add rax, rdi\n"); // raxに入ってるのはアドレス
       break;
     case ND_SUB:
       printf("  sub rax, rdi\n");
       break;
     case ND_PTR_SUB:
-      printf("  imul rdi, 8\n");
+      printf("  imul rdi, %d\n", node->ty->ptr_to->size);
       printf("  sub rax, rdi\n");
       break;
     case ND_PTR_DIFF:
       printf("  sub rax, rdi\n");
       printf("  cqo\n");
-      printf("  mov rdi, 8\n");
+      printf("  mov rdi, %d\n", node->ty->ptr_to->size);
       printf(
           "  idiv rdi\n"); // idivは暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、それを引数のレジスタの64ビットの値で割り、商をRAXに、余りをRDXにセットする
       break;
