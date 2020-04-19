@@ -175,12 +175,13 @@ LVar *new_lvar(char *name, Type *ty) {
   return lvar;
 }
 
-// 配列宣言時の型を読み取る
+// 配列宣言時の型のsuffix(配列の要素数)を読み取る
 Type *read_type_suffix(Type *ptr_to) {
   if (!consume("["))
     return ptr_to;
   int size = expect_number();
   expect("]");
+  ptr_to = read_type_suffix(ptr_to);
   return array_of(ptr_to, size);
 }
 

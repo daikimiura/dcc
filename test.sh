@@ -84,5 +84,12 @@ try 7 'int main() { int x=3; int y=5; *(&x+1)=7; return y; }'
 try 7 'int main() { int x=3; int y=5; *(&y-1)=7; return x; }'
 try 5 'int main() { int x=3; return (&x+5)-&x; }'
 try 3 'int main() { int x[2]; int *y=&x; *y=3; return *x; }'
+try 0 'int main() { int x[2][3]; int *y=x; *y=0; return **x; }'
+try 1 'int main() { int x[2][3]; int *y=x; *(y+1)=1; return *(*x+1); }'
+try 2 'int main() { int x[2][3]; int *y=x; *(y+2)=2; return *(*x+2); }'
+try 3 'int main() { int x[2][3]; int *y=x; *(y+3)=3; return **(x+1); }'
+try 4 'int main() { int x[2][3]; int *y=x; *(y+4)=4; return *(*(x+1)+1); }'
+# 宣言したメモリの範囲外にもアクセスできる
+try 5 'int main() { int x[2][3]; int *y=x; *(y+5)=5; return *(*(x+1)+2); }'
 
 echo ok
