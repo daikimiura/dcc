@@ -65,8 +65,8 @@ void add_type(Node *node) {
     case ND_ASSIGN: // =
       node->ty = node->lhs->ty;
       return;
-    case ND_LVAR: // 変数
-      node->ty = node->lvar->ty;
+    case ND_VAR: // 変数
+      node->ty = node->var->ty;
       return;
     case ND_ADDR: // &
       if (node->lhs->ty->kind == TY_ARRAY)

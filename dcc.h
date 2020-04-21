@@ -40,20 +40,21 @@ struct Token {
 };
 
 // ローカル変数型
-// LVarという構造体で一つの変数を表すことにして、先頭の要素をlocalsというポインタで持つ
-typedef struct LVar LVar;
-struct LVar {
+// Varという構造体で一つの変数を表すことにして、先頭の要素をlocalsというポインタで持つ
+typedef struct Var Var;
+struct Var {
   char *name; // 変数の名前
   Type *ty;
+  bool is_local; // ローカル変数 or グローバル変数
   int offset; // RBPからのオフセット
 };
 
 // ローカル変数のリスト
 // 連結リストで管理する
-typedef struct LVarList LVarList;
-struct LVarList {
-  LVarList *next;
-  LVar *lvar;
+typedef struct VarList VarList;
+struct VarList {
+  VarList *next;
+  Var *var;
 };
 
 void error(char *fmt, ...);
@@ -99,7 +100,7 @@ typedef enum {
   ND_ASSIGN, // =
   ND_ADDR, // &
   ND_DEREF, // *
-  ND_LVAR, // ローカル変数
+  ND_VAR, // ローカル変数 or グローバル変数
   ND_NUM, // 整数
   ND_RETURN, // return
   ND_IF, // if
@@ -118,7 +119,7 @@ struct Node {
   Type *ty; // ノードの型(Type)
   Node *lhs; // 左辺
   Node *rhs; // 右辺
-  LVar *lvar; // kindがND_LVARの場合、その変数
+  Var *var; // kindがND_VARの場合、その変数
   int val; // kindがND_NUMの場合、その値
 
   // 制御構文
@@ -141,18 +142,23 @@ struct Function {
   Function *next; // 次に実行する関数を連結リストで管理
   char *name; // 関数名
   Node *node; // 関数のブロック部分(実際の処理)
-  LVarList *locals; // ローカル変数
-  LVarList *params; // 引数
+  VarList *locals; // ローカル変数
+  VarList *params; // 引数
   int stack_size; // 引数の個数 * 8 (関数呼び出し時にに下げるスタックの大きさ)
 };
 
-Function *program(void);
+typedef struct {
+  VarList *globals; // プログラム全体に含まれるグローバル変数
+  Function *fns; // プログラム全体に含まれる関数
+} Program;
+
+Program *program(void);
 
 //
 // codegen.c
 //
 
-void codegen(Function *prog);
+void codegen(Program *prog);
 
 //
 // type.c

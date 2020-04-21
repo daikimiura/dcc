@@ -14,14 +14,14 @@ int main(int argc, char **argv) {
   user_input = argv[1];
 
   token = tokenize(user_input);
-  Function *prog = program();
+  Program *prog = program();
 
 
   // 関数ごとにローカル変数にオフセットを割り当てる
-  for (Function *fn = prog; fn; fn = fn->next) {
+  for (Function *fn = prog->fns; fn; fn = fn->next) {
     int offset = 0;
-    for (LVarList *vl = fn->locals; vl; vl = vl->next) {
-      LVar *var = vl->lvar;
+    for (VarList *vl = fn->locals; vl; vl = vl->next) {
+      Var *var = vl->var;
       offset += var->ty->size;
       var->offset = offset;
     }

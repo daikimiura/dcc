@@ -4,11 +4,11 @@
 
 #include "dcc.h"
 
-LVarList *locals;
+VarList *locals;
+VarList *globals;
 
 // 非終端記号を表す関数のプロトタイプ宣言
-Function *program();
-
+Program *program();
 
 Function *function();
 
@@ -38,6 +38,8 @@ Node *postfix();
 
 Node *primary();
 
+void global_var();
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
@@ -60,10 +62,10 @@ Node *new_node_unary(NodeKind kind, Node *expr) {
   return node;
 }
 
-Node *new_node_lvar(LVar *var) {
+Node *new_node_lvar(Var *var) {
   Node *node = calloc(1, sizeof(Node));
-  node->kind = ND_LVAR;
-  node->lvar = var;
+  node->kind = ND_VAR;
+  node->var = var;
   return node;
 }
 
@@ -152,11 +154,9 @@ Node *new_node_fun_call(char *funcname) {
   return node;
 }
 
-// 変数を名前で検索する
-// 見つからなかった場合はNULLを返す
-LVar *find_lvar(Token *tok) {
-  for (LVarList *vl = locals; vl; vl = vl->next) {
-    LVar *lvar = vl->lvar;
+Var *find_lvar(Token *tok) {
+  for (VarList *vl = locals; vl; vl = vl->next) {
+    Var *lvar = vl->var;
     if (strlen(lvar->name) == tok->len && !strncmp(tok->str, lvar->name, tok->len)) {
       return lvar;
     }
@@ -164,17 +164,53 @@ LVar *find_lvar(Token *tok) {
   return NULL;
 }
 
-// 新しいローカル変数(LVar)を連結リスト(LVarListのリスト)の先頭に追加する
-LVar *new_lvar(char *name, Type *ty) {
-  LVar *lvar = calloc(1, sizeof(LVar));
-  lvar->name = name;
-  lvar->ty = ty;
+Var *find_gvar(Token *tok) {
+  for (VarList *vl = globals; vl; vl = vl->next) {
+    Var *gvar = vl->var;
+    if (strlen(gvar->name) == tok->len && !strncmp(tok->str, gvar->name, tok->len)) {
+      return gvar;
+    }
+  }
+  return NULL;
+}
 
-  LVarList *vl = calloc(1, sizeof(LVarList));
-  vl->lvar = lvar;
+
+// 変数を名前で検索する
+// 見つからなかった場合はNULLを返す
+Var *find_var(Token *tok) {
+  Var *lvar = find_lvar(tok);
+  if (lvar)
+    return lvar;
+
+  return find_gvar(tok);
+}
+
+// 新しいローカル変数 or グローバル変数 を追加する
+Var *new_var(char *name, Type *ty, bool is_local) {
+  Var *var = calloc(1, sizeof(Var));
+  var->name = name;
+  var->ty = ty;
+  var->is_local = is_local;
+  return var;
+}
+
+// 新しいローカル変数(Var)を連結リスト(VarListのリスト)の先頭に追加する
+Var *new_lvar(char *name, Type *ty) {
+  Var *lvar = new_var(name, ty, true);
+  VarList *vl = calloc(1, sizeof(VarList));
+  vl->var = lvar;
   vl->next = locals;
   locals = vl;
   return lvar;
+}
+
+Var *new_gvar(char *name, Type *ty) {
+  Var *gvar = new_var(name, ty, false);
+  VarList *vl = calloc(1, sizeof(VarList));
+  vl->var = gvar;
+  vl->next = locals;
+  globals = vl;
+  return gvar;
 }
 
 // 配列宣言時の型のsuffix(配列の要素数)を読み取る
@@ -187,20 +223,20 @@ Type *read_type_suffix(Type *ptr_to) {
   return array_of(ptr_to, size);
 }
 
-LVarList *read_func_param() {
+VarList *read_func_param() {
   Type *ty = basetype();
   char *name = expect_ident();
-  LVarList *vl = calloc(1, sizeof(LVarList));
-  vl->lvar = new_lvar(name, ty);
+  VarList *vl = calloc(1, sizeof(VarList));
+  vl->var = new_lvar(name, ty);
   return vl;
 }
 
-LVarList *read_func_params() {
+VarList *read_func_params() {
   if (consume(")"))
     return NULL;
 
-  LVarList *head = read_func_param();
-  LVarList *cur = head;
+  VarList *head = read_func_param();
+  VarList *cur = head;
 
   while (!consume(")")) {
     expect(",");
@@ -211,19 +247,48 @@ LVarList *read_func_params() {
   return head;
 }
 
-// program = function*
-Function *program() {
+// program() が function() かどうか判定する
+bool is_function() {
+  Token *tok = token;
+  // tokenを先読みして判定
+  // basetype ident ( ... ならfunc
+  basetype();
+  bool is_func = consume_ident() && consume("(");
+  token = tok;
+  return is_func;
+};
+
+// program = (global-var | function)*
+Program *program() {
   locals = NULL;
+  globals = NULL;
 
   Function head = {};
   Function *cur = &head;
 
   while (!at_eof()) {
-    cur->next = function();
-    cur = cur->next;
+    if (is_function()) {
+      cur->next = function();
+      cur = cur->next;
+    } else {
+      global_var();
+    }
   }
 
-  return head.next;
+  Program *prog = calloc(1, sizeof(Program));
+  prog->globals = globals;
+  prog->fns = head.next;
+
+  return prog;
+}
+
+// global-var = basetype ident ("[" num "]")* ";"
+void global_var() {
+  Type *ty = basetype();
+  char *name = expect_ident();
+  ty = read_type_suffix(ty);
+  expect(";");
+  new_gvar(name, ty);
 }
 
 // function = basetype ident "(" params? ")" "{" stmt* "}"
@@ -363,7 +428,7 @@ Node *declaration() {
 
   char *name = expect_ident();
   ty = read_type_suffix(ty);
-  LVar *lvar = new_lvar(name, ty);
+  Var *lvar = new_lvar(name, ty);
 
   if (consume(";"))
     return new_node_null();
@@ -488,7 +553,7 @@ Node *primary() {
     return node;
   }
 
-  if(consume("sizeof")) {
+  if (consume("sizeof")) {
     Node *node = unary();
     add_type(node);
     return new_node_num(node->ty->size);
@@ -501,11 +566,11 @@ Node *primary() {
       return node;
     }
 
-    LVar *lvar = find_lvar(tok);
-    if (!lvar) {
+    Var *var = find_var(tok);
+    if (!var) {
       error("undefined variable");
     }
-    return new_node_lvar(lvar);
+    return new_node_lvar(var);
   }
 
   return new_node_num(expect_number());

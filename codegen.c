@@ -24,11 +24,21 @@ static char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 // それ以外の場合にはエラーを返す
 void gen_addr(Node *node) {
   switch (node->kind) {
-    case ND_LVAR:
-      printf("  mov rax, rbp\n");
-      printf("  sub rax, %d\n", node->lvar->offset);
-      printf("  push rax\n");
+    case ND_VAR: {
+      Var *var = node->var;
+
+      if (var->is_local) {
+        printf("  mov rax, rbp\n");
+        printf("  sub rax, %d\n", node->var->offset);
+        printf("  push rax\n");
+      } else {
+        // http://tepe.tec.fukuoka-u.ac.jp/HP98/studfile/grth/gt08.pdf
+        // http://www.tamasoft.co.jp/lasm/help/lasm9igk.htm
+        printf("  push [%s@GOTPCREL + rip]\n", var->name);
+      }
+
       return;
+    }
     case ND_DEREF:
       gen(node->lhs);
       return;
@@ -65,7 +75,7 @@ void gen(Node *node) {
       printf("  pop rax\n");
       printf("  jmp .L.return.%s\n", funcname);
       return;
-    case ND_LVAR:
+    case ND_VAR:
       gen_addr(node);
       if (node->ty->kind != TY_ARRAY)
         load();
@@ -243,11 +253,24 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
-void codegen(Function *prog) {
-  // アセンブリの前半部分を出力
-  printf(".intel_syntax noprefix\n");
+// データ(.data)セクションの内容を出力する
+// https://qiita.com/MoriokaReimen/items/b320e6cc82c8873a602f
+void emit_data(Program *prog) {
+  printf(".data\n");
 
-  for (Function *fn = prog; fn; fn = fn->next) {
+  for (VarList *vl = prog->globals; vl; vl = vl->next) {
+    Var *gvar = vl->var;
+    printf("%s:\n", gvar->name);
+    // 指定したバイト数(var->ty->size)を0で埋める
+    // https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
+    printf("  .zero %d\n", gvar->ty->size);
+  }
+}
+
+void emit_text(Program *prog) {
+  printf(".text\n");
+
+  for (Function *fn = prog->fns; fn; fn = fn->next) {
     funcname = fn->name;
     printf(".global _%s\n", funcname);
     printf("_%s:\n", funcname);
@@ -260,8 +283,8 @@ void codegen(Function *prog) {
     // ABIで指定されたレジスタに格納されている関数の引数の値を
     // ローカル変数のためのスタック上の領域に書き出す
     int i = 0;
-    for (LVarList *vl = fn->params; vl; vl = vl->next) {
-      LVar *lvar = vl->lvar;
+    for (VarList *vl = fn->params; vl; vl = vl->next) {
+      Var *lvar = vl->var;
       printf("  mov[rbp-%d], %s\n", lvar->offset, argreg[i++]);
     }
 
@@ -275,4 +298,10 @@ void codegen(Function *prog) {
     // 最後の式の値がRAXに残っているのでそれが返り値になる
     printf("  ret\n");
   }
+}
+
+void codegen(Program *prog) {
+  printf(".intel_syntax noprefix\n");
+  emit_data(prog);
+  emit_text(prog);
 }
