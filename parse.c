@@ -480,12 +480,18 @@ Node *postfix() {
   return node;
 }
 
-// primary = "(" expr ")" | ident func-args? | num
+// primary = "(" expr ")" | "sizeof" unary | ident func-args? | num
 Node *primary() {
   if (consume("(")) {
     Node *node = expr();
     expect(")");
     return node;
+  }
+
+  if(consume("sizeof")) {
+    Node *node = unary();
+    add_type(node);
+    return new_node_num(node->ty->size);
   }
 
   Token *tok = consume_ident();
