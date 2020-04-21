@@ -91,5 +91,17 @@ try 3 'int main() { int x[2][3]; int *y=x; *(y+3)=3; return **(x+1); }'
 try 4 'int main() { int x[2][3]; int *y=x; *(y+4)=4; return *(*(x+1)+1); }'
 # 宣言したメモリの範囲外にもアクセスできる
 try 5 'int main() { int x[2][3]; int *y=x; *(y+5)=5; return *(*(x+1)+2); }'
+try 3 'int main() { int x[3]; *x=3; x[1]=4; x[2]=5; return *x; }'
+try 4 'int main() { int x[3]; *x=3; x[1]=4; x[2]=5; return *(x+1); }'
+try 5 'int main() { int x[3]; *x=3; x[1]=4; x[2]=5; return *(x+2); }'
+try 5 'int main() { int x[3]; *x=3; x[1]=4; x[2]=5; return *(x+2); }'
+try 5 'int main() { int x[3]; *x=3; x[1]=4; 2[x]=5; return *(x+2); }'
+try 0 'int main() { int x[2][3]; int *y=x; y[0]=0; return x[0][0]; }'
+try 1 'int main() { int x[2][3]; int *y=x; y[1]=1; return x[0][1]; }'
+try 2 'int main() { int x[2][3]; int *y=x; y[2]=2; return x[0][2]; }'
+try 3 'int main() { int x[2][3]; int *y=x; y[3]=3; return x[1][0]; }'
+try 4 'int main() { int x[2][3]; int *y=x; y[4]=4; return x[1][1]; }'
+try 5 'int main() { int x[2][3]; int *y=x; y[5]=5; return x[1][2]; }'
+try 6 'int main() { int x[2][3]; int *y=x; y[6]=6; return x[2][0]; }'
 
 echo ok

@@ -34,6 +34,8 @@ Node *mul();
 
 Node *unary();
 
+Node *postfix();
+
 Node *primary();
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
@@ -450,6 +452,7 @@ Node *mul() {
 
 // unary = ("+" | "-")? primary
 //       | ("*" | "&") unary
+//       | postfix
 Node *unary() {
   Token *t;
   if (consume("+"))
@@ -460,7 +463,21 @@ Node *unary() {
     return new_node_unary(ND_DEREF, unary());
   if (consume("&"))
     return new_node_unary(ND_ADDR, unary());
-  return primary();
+  return postfix();
+}
+
+// postfix = primary ("[" expr "]")*
+Node *postfix() {
+  Node *node = primary();
+
+  while (consume("[")) {
+    // x[y] は *(x+y) と同じ意味
+    Node *exp = new_node_add(node, expr());
+    expect("]");
+    node = new_node_unary(ND_DEREF, exp);
+  }
+
+  return node;
 }
 
 // primary = "(" expr ")" | ident func-args? | num
