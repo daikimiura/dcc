@@ -164,7 +164,12 @@ void codegen(Program *prog);
 // type.c
 //
 
-typedef enum {TY_INT, TY_PTR, TY_ARRAY} TypeKind;
+typedef enum {
+  TY_INT,
+  TY_CHAR,
+  TY_PTR,
+  TY_ARRAY
+} TypeKind;
 
 struct Type {
   TypeKind kind;
@@ -176,6 +181,7 @@ struct Type {
 bool is_integer(Type *ty);
 Type *pointer_to(Type *ptr_to);
 void add_type(Node *node);
+Type *char_type;
 Type *int_type;
 Type *array_of(Type *pointer_to, int size);
 

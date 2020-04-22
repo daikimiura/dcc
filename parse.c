@@ -247,6 +247,10 @@ VarList *read_func_params() {
   return head;
 }
 
+bool is_typename() {
+  return peek("char") || peek("int");
+}
+
 // program() が function() かどうか判定する
 bool is_function() {
   Token *tok = token;
@@ -319,11 +323,18 @@ Function *function() {
   return fn;
 }
 
-// 現時点ではint型とポインタ型のみ
-// basetype = "int" "*"*
+// 現時点ではint型/char型/ポインタ型のみ
+// basetype = ( "int" | "char" ) "*"*
 Type *basetype() {
-  expect("int");
-  Type *ty = int_type;
+  Type *ty;
+  if (consume("char")) {
+    ty = char_type;
+  } else {
+    expect("int");
+    ty = int_type;
+  }
+
+
   while (consume("*")) {
     ty = pointer_to(ty);
   }
@@ -414,7 +425,7 @@ Node *stmt2() {
     return node;
   }
 
-  if (peek("int"))
+  if (is_typename())
     return declaration();
 
   Node *node = expr();
