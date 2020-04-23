@@ -112,6 +112,62 @@ bool is_alnum(char c) {
   return is_alpha(c) || ('0' <= c && c <= '9');
 }
 
+char get_escape_char(char c) {
+  // http://wisdom.sakura.ne.jp/programming/c/Cdata1.html
+  switch (c) {
+    case 'a':
+      return '\a';
+    case 'b':
+      return '\b';
+    case 't':
+      return '\t';
+    case 'n':
+      return '\n';
+    case 'v':
+      return '\v';
+    case 'f':
+      return '\f';
+    case 'r':
+      return '\r';
+    case 'e':
+      return 27; // http://www3.nit.ac.jp/~tamura/ex2/ascii.html
+    case '0':
+      return 0;
+    default:
+      return c;
+  }
+}
+
+Token *read_string_literal(Token *cur, char *start) {
+  char *p = start + 1;
+  char buf[1024];
+  int len = 0;
+
+  for (;;) {
+    if (len == sizeof(buf))
+      error_at(start, "文字列リテラルが長すぎます");
+    if (*p == '\0')
+      error_at(start, "文字列リテラルが閉じられていません");
+    if (*p == '"')
+      break;
+
+    if (*p == '\\') {
+      p++;
+      buf[len++] = get_escape_char(*p++);
+    } else {
+      buf[len++] = *p++;
+    }
+  }
+
+  // 例えば "abc"; のような入力文字列があった時、startは最初の'"'でpは';'になる
+  Token *tok = new_token(TK_STR, cur, start, p - start + 1);
+  tok->contents = malloc(len + 1);
+  memcpy(tok->contents, buf, len);
+  tok->contents[len] = '\0';
+  tok->cont_len = len + 1;
+  return tok;
+}
+
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p) {
   Token head;
@@ -127,20 +183,8 @@ Token *tokenize(char *p) {
 
     // 文字列リテラル
     if (*p == '"') {
-      char *q = p++;
-      while (*p && *p != '"')
-        p++;
-
-      if (!*p)
-        error_at(q, "文字列リテラルが閉じられていません");
-      p++;
-
-      // 例えば "abc"; のような入力文字列があった時、qは最初の'"'でpは';'になる
-      cur = new_token(TK_STR, cur, q, p - q);
-      // 自動で終端のnullバイト("\0")が追加される
-      // https://linuxjm.osdn.jp/html/LDP_man-pages/man3/strdup.3.html
-      cur->contents = strndup(q + 1, p - q - 2);
-      cur->cont_len = p - q - 1;
+      cur = read_string_literal(cur, p);
+      p += cur->len;
       continue;
     }
 
