@@ -273,9 +273,16 @@ void emit_data(Program *prog) {
   for (VarList *vl = prog->globals; vl; vl = vl->next) {
     Var *gvar = vl->var;
     printf("%s:\n", gvar->name);
-    // 指定したバイト数(var->ty->size)を0で埋める
-    // https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
-    printf("  .zero %d\n", gvar->ty->size);
+    if (!gvar->contents) {
+      // 指定したバイト数(var->ty->size)を0で埋める
+      // https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
+      printf("  .zero %d\n", gvar->ty->size);
+      continue;
+    } else {
+      for (int i = 0; i < gvar->cont_len; i++) {
+        printf("  .byte %d\n", gvar->contents[i]);
+      }
+    }
   }
 }
 

@@ -125,6 +125,25 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    // 文字列リテラル
+    if (*p == '"') {
+      char *q = p++;
+      while (*p && *p != '"')
+        p++;
+
+      if (!*p)
+        error_at(q, "文字列リテラルが閉じられていません");
+      p++;
+
+      // 例えば "abc"; のような入力文字列があった時、qは最初の'"'でpは';'になる
+      cur = new_token(TK_STR, cur, q, p - q);
+      // 自動で終端のnullバイト("\0")が追加される
+      // https://linuxjm.osdn.jp/html/LDP_man-pages/man3/strdup.3.html
+      cur->contents = strndup(q + 1, p - q - 2);
+      cur->cont_len = p - q - 1;
+      continue;
+    }
+
     if (strncmp(p, "sizeof", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_RESERVED, cur, p, 6);
       p += 6;

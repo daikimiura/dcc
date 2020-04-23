@@ -62,7 +62,7 @@ Node *new_node_unary(NodeKind kind, Node *expr) {
   return node;
 }
 
-Node *new_node_lvar(Var *var) {
+Node *new_node_var(Var *var) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_VAR;
   node->var = var;
@@ -128,6 +128,15 @@ Node *new_node_null() {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_NULL;
   return node;
+}
+
+// .dataセクションのラベルを作成する
+// 文字列をグローバル変数として扱うために、普通のグローバル変数とは名前が被らない一意なラベルを用いる
+char *new_label() {
+  static int cnt = 0;
+  char buf[20];
+  sprintf(buf, ".L.data.%d", cnt++);
+  return strndup(buf, 20);
 }
 
 // funcargs = "(" (assign ("," assign)*)? ")"
@@ -445,7 +454,7 @@ Node *declaration() {
     return new_node_null();
 
   expect("=");
-  Node *lhs = new_node_lvar(lvar);
+  Node *lhs = new_node_var(lvar);
   Node *rhs = expr();
   Node *node = new_node(ND_ASSIGN, lhs, rhs);
   expect(";");
@@ -556,8 +565,14 @@ Node *postfix() {
   return node;
 }
 
-// primary = "(" expr ")" | "sizeof" unary | ident func-args? | num
+// primary = "(" expr ")"
+//         | "sizeof" unary
+//         | ident func-args?
+//         | str
+//         | num
 Node *primary() {
+  Token *tok;
+
   if (consume("(")) {
     Node *node = expr();
     expect(")");
@@ -570,8 +585,7 @@ Node *primary() {
     return new_node_num(node->ty->size);
   }
 
-  Token *tok = consume_ident();
-  if (tok) {
+  if ((tok = consume_ident())) {
     if (consume("(")) {
       Node *node = new_node_fun_call(strndup(tok->str, tok->len));
       return node;
@@ -581,7 +595,18 @@ Node *primary() {
     if (!var) {
       error("undefined variable");
     }
-    return new_node_lvar(var);
+    return new_node_var(var);
+  }
+
+  tok = token;
+  if (tok->kind == TK_STR) {
+    token = token->next;
+
+    Type *ty = array_of(char_type, tok->cont_len);
+    Var *var = new_gvar(new_label(), ty);
+    var->contents = tok->contents;
+    var->cont_len = tok->cont_len;
+    return new_node_var(var);
   }
 
   return new_node_num(expect_number());

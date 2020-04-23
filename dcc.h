@@ -26,6 +26,7 @@ typedef enum {
   TK_RESERVED, // 記号
   TK_IDENT, // 識別子
   TK_NUM, // 整数
+  TK_STR, // 文字列リテラル
   TK_EOF, // End Of File
 } TokenKind;
 
@@ -37,16 +38,20 @@ struct Token {
   int val; // kindがTK_NUMの場合、その値
   char *str; // トークン文字列
   int len; // トークンの長さ
+  char *contents; // 文字列リテラルの内容
+  int cont_len; // 文字列リテラルの長さ
 };
 
-// ローカル変数型
-// Varという構造体で一つの変数を表すことにして、先頭の要素をlocalsというポインタで持つ
+// 変数
+// Varという構造体で一つの変数を表すことにして、先頭の要素をlocals/globalsというポインタで持つ
 typedef struct Var Var;
 struct Var {
   char *name; // 変数の名前
   Type *ty;
   bool is_local; // ローカル変数 or グローバル変数
   int offset; // RBPからのオフセット
+  char *contents; // 変数が文字列リテラルのとき、その値(終端のnullバイト'\0'を含む)
+  int cont_len; // 変数が文字列リテラルのとき、その長さ(終端のnullバイト'\0'を含む)
 };
 
 // ローカル変数のリスト
