@@ -212,7 +212,7 @@ Var *new_gvar(char *name, Type *ty) {
   Var *gvar = new_var(name, ty, false);
   VarList *vl = calloc(1, sizeof(VarList));
   vl->var = gvar;
-  vl->next = locals;
+  vl->next = globals;
   globals = vl;
   return gvar;
 }
