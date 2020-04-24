@@ -1,5 +1,5 @@
 CFLAGS=-std=c11 -g
-SRCS=$(wildcard *.c)
+SRCS=$(filter-out tests.c, $(wildcard *.c))
 OBJS=$(SRCS:.c=.o)
 
 dcc: $(OBJS)
@@ -8,7 +8,9 @@ dcc: $(OBJS)
 $(OBJS): dcc.h
 
 test: dcc
-	./test.sh
+	./dcc tests.c > tmp.s
+	gcc -o tmp tmp.s
+	./tmp
 
 clean:
 	rm -f dcc *.o *~ tmp*
