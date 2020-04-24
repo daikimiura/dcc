@@ -82,6 +82,10 @@ void gen(Node *node) {
     case ND_NUM:
       printf("  push %d\n", node->val);
       return;
+    case ND_EXPR_STMT:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      return;
     case ND_RETURN:
       gen(node->lhs);
       printf("  pop rax\n");

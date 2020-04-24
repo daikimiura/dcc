@@ -266,6 +266,10 @@ bool is_function() {
   return is_func;
 };
 
+Node *read_expr_stmt() {
+  return new_node_unary(ND_EXPR_STMT, expr());
+}
+
 // program = (global-var | function)*
 Program *program() {
   locals = NULL;
@@ -399,7 +403,7 @@ Node *stmt2() {
 
     expect("(");
     if (!consume(";")) {
-      node->init = expr();
+      node->init = read_expr_stmt();
       expect(";");
     }
 
@@ -409,7 +413,7 @@ Node *stmt2() {
     }
 
     if (!consume(")")) {
-      node->inc = expr();
+      node->inc = read_expr_stmt();
       expect(")");
     }
 
@@ -438,7 +442,7 @@ Node *stmt2() {
   if (is_typename())
     return declaration();
 
-  Node *node = expr();
+  Node *node = read_expr_stmt();
   expect(";");
   return node;
 }
@@ -459,7 +463,7 @@ Node *declaration() {
   Node *rhs = expr();
   Node *node = new_node(ND_ASSIGN, lhs, rhs);
   expect(";");
-  return node;
+  return new_node_unary(ND_EXPR_STMT, node);
 }
 
 // expr = assign
@@ -579,6 +583,10 @@ Node *stmt_expr_tail() {
   }
   scope = sc;
   expect(")");
+
+  if (cur->kind != ND_EXPR_STMT)
+    error("voidを返すstatement expressionはサポートされていません");
+  memcpy(cur, cur->lhs, sizeof(Node));
 
   return node;
 }
