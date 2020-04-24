@@ -6,6 +6,7 @@
 #define DCC_DCC_H
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -13,6 +14,9 @@
 #include <string.h>
 
 typedef struct Type Type;
+
+// 入力ファイル名
+extern char *filename;
 
 // 入力プログラム
 extern char *user_input;
@@ -184,10 +188,14 @@ struct Type {
 };
 
 bool is_integer(Type *ty);
+
 Type *pointer_to(Type *ptr_to);
+
 void add_type(Node *node);
+
 Type *char_type;
 Type *int_type;
+
 Type *array_of(Type *pointer_to, int size);
 
 #endif //DCC_DCC_H

@@ -14,7 +14,7 @@ try() {
   expected="$1"
   input="$2"
 
-  ./dcc "$input" >tmp.s
+  ./dcc <(echo "$input") >tmp.s
   gcc -o tmp tmp.s tmp2.o
   ./tmp
   actual="$?"
