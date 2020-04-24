@@ -4,8 +4,9 @@
 
 #include "dcc.h"
 
-VarList *locals;
-VarList *globals;
+static VarList *locals;
+static VarList *globals;
+static VarList *scope;
 
 // 非終端記号を表す関数のプロトタイプ宣言
 Program *program();
@@ -169,35 +170,16 @@ Node *new_node_fun_call(char *funcname) {
   return node;
 }
 
-Var *find_lvar(Token *tok) {
-  for (VarList *vl = locals; vl; vl = vl->next) {
-    Var *lvar = vl->var;
-    if (strlen(lvar->name) == tok->len && !strncmp(tok->str, lvar->name, tok->len)) {
-      return lvar;
-    }
-  }
-  return NULL;
-}
-
-Var *find_gvar(Token *tok) {
-  for (VarList *vl = globals; vl; vl = vl->next) {
-    Var *gvar = vl->var;
-    if (strlen(gvar->name) == tok->len && !strncmp(tok->str, gvar->name, tok->len)) {
-      return gvar;
-    }
-  }
-  return NULL;
-}
-
-
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
 Var *find_var(Token *tok) {
-  Var *lvar = find_lvar(tok);
-  if (lvar)
-    return lvar;
-
-  return find_gvar(tok);
+  for (VarList *vl = scope; vl; vl = vl->next) {
+    Var *var = vl->var;
+    if (strlen(var->name) == tok->len && !strncmp(tok->str, var->name, tok->len)) {
+      return var;
+    }
+  }
+  return NULL;
 }
 
 // 新しいローカル変数 or グローバル変数 を追加する
@@ -206,6 +188,13 @@ Var *new_var(char *name, Type *ty, bool is_local) {
   var->name = name;
   var->ty = ty;
   var->is_local = is_local;
+
+  // scope(VarList)の先頭に変数を追加
+  VarList *sc = calloc(1, sizeof(VarList));
+  sc->var = var;
+  sc->next = scope;
+  scope = sc;
+
   return var;
 }
 
@@ -321,6 +310,8 @@ Function *function() {
   basetype();
   fn->name = expect_ident();
   expect("(");
+
+  VarList *sc = scope;
   fn->params = read_func_params();
   expect("{");
 
@@ -332,6 +323,8 @@ Function *function() {
     cur->next = stmt();
     cur = cur->next;
   }
+  // スコープを戻す
+  scope = sc;
 
   fn->node = head.next;
   fn->locals = locals;
@@ -431,10 +424,12 @@ Node *stmt2() {
     Node head = {};
     Node *cur = &head;
 
+    VarList *sc = scope;
     while (!consume("}")) {
       cur->next = stmt();
       cur = cur->next;
     }
+    scope = sc;
 
     node->body = head.next;
     return node;
@@ -577,10 +572,12 @@ Node *stmt_expr_tail() {
   node->body = stmt();
   Node *cur = node->body;
 
-  while(!consume("}")){
+  VarList *sc = scope;
+  while (!consume("}")) {
     cur->next = stmt();
     cur = cur->next;
   }
+  scope = sc;
   expect(")");
 
   return node;
@@ -596,7 +593,7 @@ Node *primary() {
   Token *tok;
 
   if (consume("(")) {
-    if(consume("{"))
+    if (consume("{"))
       return stmt_expr_tail();
 
     Node *node = expr();
