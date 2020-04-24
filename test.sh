@@ -159,5 +159,10 @@ try 108 'int main() { return "\l"[0]; }'
 try 2 'int main() { /* return 1; */ return 2; }'
 try 2 'int main() { // return 1;
 return 2; }'
+try 0 'int main() { return ({ 0; }); }'
+try 2 'int main() { return ({ 0; 1; 2; }); }'
+try 1 'int main() { ({ 0; return 1; 2; }); return 3; }'
+try 3 'int main() { return ({ int x=3; x; }); }'
+try 5 'int main() { return ({ int x=3; x=5; }); }'
 
 echo ok

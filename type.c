@@ -82,5 +82,12 @@ void add_type(Node *node) {
         error("invalid pointer dereference");
       node->ty = node->lhs->ty->ptr_to;
       return;
+    case ND_STMT_EXPR: {
+      Node *last = node->body;
+      while (last->next)
+        last = last->next;
+      node->ty = last->ty;
+      return;
+    }
   }
 }

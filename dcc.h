@@ -117,6 +117,7 @@ typedef enum {
   ND_FOR, // for
   ND_BLOCK, // ブロック { ... }
   ND_FUNCALL, // 関数呼び出し
+  ND_STMT_EXPR, // GNU Statement expression
   ND_NULL,
 } NodeKind;
 
@@ -138,8 +139,8 @@ struct Node {
   Node *init; // kindがND_FORの場合、初期値
   Node *inc; // kindがND_FORの場合、ループごとの増分
 
-  // ブロック
-  Node *body; // kindがND_BLOCKの時、ブロックに含まれる式
+  // ブロック or Statement expression
+  Node *body; // kindがND_BLOCK or Statement expressionの時、含まれる式
 
   // 関数
   char *funcname; // kindがND_FUNCALLの時、関数名

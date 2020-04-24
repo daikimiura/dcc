@@ -130,6 +130,12 @@ Node *new_node_null() {
   return node;
 }
 
+Node *new_node_stmt_expr() {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_STMT_EXPR;
+  return node;
+}
+
 // .dataセクションのラベルを作成する
 // 文字列をグローバル変数として扱うために、普通のグローバル変数とは名前が被らない一意なラベルを用いる
 char *new_label() {
@@ -565,7 +571,23 @@ Node *postfix() {
   return node;
 }
 
-// primary = "(" expr ")"
+// stmt-expr = "(" "{" stmt stmt* "}" ")"
+Node *stmt_expr_tail() {
+  Node *node = new_node_stmt_expr();
+  node->body = stmt();
+  Node *cur = node->body;
+
+  while(!consume("}")){
+    cur->next = stmt();
+    cur = cur->next;
+  }
+  expect(")");
+
+  return node;
+}
+
+// primary = "(" "{" stmt-expr "}" ")"
+//         | "(" expr ")"
 //         | "sizeof" unary
 //         | ident func-args?
 //         | str
@@ -574,6 +596,9 @@ Node *primary() {
   Token *tok;
 
   if (consume("(")) {
+    if(consume("{"))
+      return stmt_expr_tail();
+
     Node *node = expr();
     expect(")");
     return node;
