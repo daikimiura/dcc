@@ -204,6 +204,25 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    // 行コメント
+    if (strncmp(p, "//", 2) == 0) {
+      p += 2;
+      while (*p != '\n')
+        p++;
+      continue;
+    }
+
+    // ブロックコメント
+    if (strncmp(p, "/*", 2) == 0) {
+      // http://hitorilife.com/strstr.php
+      // 文字列から文字列を探して、渡された文字列が見つかったときはその先頭へのポインタ、見つからなかったときにはNULLを返す
+      char *q = strstr(p + 2, "*/");
+      if (!q)
+        error_at(p, "コメントが閉じられていません");
+      p = q + 2;
+      continue;
+    }
+
     // 文字列リテラル
     if (*p == '"') {
       cur = read_string_literal(cur, p);

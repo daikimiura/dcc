@@ -156,5 +156,8 @@ try 0 'int main() { return "\0"[0]; }'
 try 106 'int main() { return "\j"[0]; }'
 try 107 'int main() { return "\k"[0]; }'
 try 108 'int main() { return "\l"[0]; }'
+try 2 'int main() { /* return 1; */ return 2; }'
+try 2 'int main() { // return 1;
+return 2; }'
 
 echo ok
