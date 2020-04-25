@@ -191,6 +191,7 @@ typedef enum {
 struct Type {
   TypeKind kind;
   int size; // sizeof()の値
+  int align; // アラインメント http://www5d.biglobe.ne.jp/~noocyte/Programming/Alignment.html
   Type *ptr_to; // kindがTY_PTRの時、指しているTypeオブジェクトへのポインタ
   int array_len; // kindがTY_ARRAYの時、配列の長さ
   Member *members; // kindがTY_STRUCTの時、構造体のメンバ
@@ -206,6 +207,8 @@ struct Member {
 };
 
 bool is_integer(Type *ty);
+
+int align_to(int n, int align);
 
 Type *pointer_to(Type *ptr_to);
 

@@ -658,13 +658,20 @@ int main() {
     } x;
     sizeof(x);
   }), "struct {char a; char b;} x; sizeof(x);");
-  assert(9, ({
+  assert(16, ({
     struct {
       char a;
       int b;
     } x;
     sizeof(x);
   }), "struct {char a; int b;} x; sizeof(x);");
+  assert(2, ({
+    struct {
+      char a;
+      char b;
+    } x;
+    sizeof(x);
+  }), "struct {char a; char b;} x; sizeof(x);");
 
   printf("OK\n");
   return 0;

@@ -4,29 +4,42 @@
 
 #include "dcc.h"
 
-Type *int_type = &(Type) {TY_INT, 8};
+Type *int_type = &(Type) {TY_INT, 8, 8};
 
-Type *char_type = &(Type) {TY_CHAR, 1};
+Type *char_type = &(Type) {TY_CHAR, 1, 1};
 
 bool is_integer(Type *ty) {
   return ty->kind == TY_INT || ty->kind == TY_CHAR;
 }
 
-Type *pointer_to(Type *ptr_to) {
+Type *new_type(TypeKind kind, int size, int align) {
   Type *ty = calloc(1, sizeof(Type));
-  ty->kind = TY_PTR;
-  ty->size = 8;
+  ty->kind = kind;
+  ty->size = size;
+  ty->align = align;
+  return ty;
+}
+
+Type *pointer_to(Type *ptr_to) {
+  Type *ty = new_type(TY_PTR, 8, 8);
   ty->ptr_to = ptr_to;
   return ty;
 }
 
 Type *array_of(Type *pointer_to, int len) {
-  Type *ty = calloc(1, sizeof(Type));
-  ty->kind = TY_ARRAY;
-  ty->size = pointer_to->size * len;
+  Type *ty = new_type(TY_ARRAY, pointer_to->size * len, pointer_to->align);
   ty->ptr_to = pointer_to;
   ty->array_len = len;
   return ty;
+}
+
+// n以上の整数のうち、alignで割り切れる最小の整数を返す
+// alignは2の冪乗
+// align_to(33, 8) => 40
+int align_to(int n, int align) {
+  // ~(align - 1) => align以上のbitを全て立てる
+  // (n + align - 1) => 最大でも align - 1を足せばalignの倍数になるはず
+  return (n + align - 1) & ~(align - 1);
 }
 
 // Nodeに型の情報を再帰的に追加する

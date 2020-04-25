@@ -4,14 +4,6 @@
 
 #include "dcc.h"
 
-// n以上の整数のうち、alignで割り切れる最小の整数を返す
-// align_to(33, 8) => 40
-int align_to(int n, int align) {
-  // ~(align - 1) => align以上のbitを全て立てる
-  // (n + align - 1) => 最大でも align - 1を足せばalignの倍数になるはず
-  return (n + align - 1) & ~(align - 1);
-}
-
 char *read_file(char *path) {
   FILE *fp = fopen(path, "r");
   if (!fp)
