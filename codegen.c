@@ -45,6 +45,14 @@ void gen_addr(Node *node) {
     case ND_DEREF:
       gen(node->lhs);
       return;
+    case ND_MEMBER:
+      // struct型の変数のアドレスを取得
+      gen_addr(node->lhs);
+      printf("  pop rax\n");
+      // 取得したアドレスからoffset分上のアドレスに欲しいメンバのアドレスがある
+      printf("  add rax, %d\n", node->member->offset);
+      printf("  push rax\n");
+      return;
     default:
       error("ローカル変数ではありません");
   }
@@ -92,6 +100,7 @@ void gen(Node *node) {
       printf("  jmp .L.return.%s\n", funcname);
       return;
     case ND_VAR:
+    case ND_MEMBER:
       gen_addr(node);
       if (node->ty->kind != TY_ARRAY)
         load(node->ty);

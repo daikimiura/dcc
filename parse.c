@@ -15,6 +15,10 @@ Function *function();
 
 Node *declaration();
 
+Type *struct_decl();
+
+Member *struct_member();
+
 Type *basetype();
 
 Node *stmt();
@@ -252,7 +256,7 @@ VarList *read_func_params() {
 }
 
 bool is_typename() {
-  return peek("char") || peek("int");
+  return peek("char") || peek("int") || peek("struct");
 }
 
 // program() が function() かどうか判定する
@@ -335,17 +339,53 @@ Function *function() {
   return fn;
 }
 
-// 現時点ではint型/char型/ポインタ型のみ
-// basetype = ( "int" | "char" ) "*"*
-Type *basetype() {
-  Type *ty;
-  if (consume("char")) {
-    ty = char_type;
-  } else {
-    expect("int");
-    ty = int_type;
+// struct-decl = "struct" "{" struct-member "}"
+Type *struct_decl() {
+  expect("struct");
+  expect("{");
+
+  // メンバを連結リストで管理
+  Member head = {};
+  Member *cur = &head;
+
+  while (!consume("}")) {
+    cur->next = struct_member();
+    cur = cur->next;
   }
 
+  Type *ty = calloc(1, sizeof(Type));
+  ty->kind = TY_STRUCT;
+  ty->members = head.next;
+
+  int offset = 0;
+  for (Member *mem = ty->members; mem; mem = mem->next) {
+    mem->offset = offset;
+    offset += mem->ty->size;
+  }
+  ty->size = offset;
+
+  return ty;
+}
+
+// struct-member = basetype ident ("[" num "]")*
+Member *struct_member() {
+  Member *mem = calloc(1, sizeof(Member));
+  mem->ty = basetype();
+  mem->name = expect_ident();
+  mem->ty = read_type_suffix(mem->ty);
+  expect(";");
+  return mem;
+}
+
+// basetype = ( "int" | "char" | struct-decl ) "*"*
+Type *basetype() {
+  Type *ty;
+  if (consume("char"))
+    ty = char_type;
+  else if (consume("int"))
+    ty = int_type;
+  else
+    ty = struct_decl();
 
   while (consume("*")) {
     ty = pointer_to(ty);
@@ -556,18 +596,49 @@ Node *unary() {
   return postfix();
 }
 
-// postfix = primary ("[" expr "]")*
+Member *find_member(Type *ty, char *name) {
+  for (Member *mem = ty->members; mem; mem = mem->next)
+    if (!(strcmp(mem->name, name)))
+      return mem;
+
+  return NULL;
+}
+
+Node *struct_ref(Node *lhs) {
+  add_type(lhs);
+  if (lhs->ty->kind != TY_STRUCT)
+    error_at(token->str, "構造体ではありません");
+
+  Token *tok = token;
+  Member *mem = find_member(lhs->ty, expect_ident());
+  if (!mem)
+    error_at(tok->str, "このメンバは定義されていません");
+
+  Node *node = new_node_unary(ND_MEMBER, lhs);
+  node->member = mem;
+  return node;
+}
+
+// postfix = primary ("[" expr "]" | "." ident)*
 Node *postfix() {
   Node *node = primary();
 
-  while (consume("[")) {
-    // x[y] は *(x+y) と同じ意味
-    Node *exp = new_node_add(node, expr());
-    expect("]");
-    node = new_node_unary(ND_DEREF, exp);
-  }
+  for (;;) {
+    if (consume("[")) {
+      // x[y] は *(x+y) と同じ意味
+      Node *exp = new_node_add(node, expr());
+      expect("]");
+      node = new_node_unary(ND_DEREF, exp);
+      continue;
+    }
 
-  return node;
+    if (consume(".")) {
+      node = struct_ref(node);
+      continue;
+    }
+
+    return node;
+  }
 }
 
 // stmt-expr = "(" "{" stmt stmt* "}" ")"

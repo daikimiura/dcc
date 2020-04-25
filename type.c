@@ -70,6 +70,9 @@ void add_type(Node *node) {
     case ND_VAR: // 変数
       node->ty = node->var->ty;
       return;
+    case ND_MEMBER: // 構造体のメンバ
+      node->ty = node->member->ty;
+      return;
     case ND_ADDR: // &
       if (node->lhs->ty->kind == TY_ARRAY)
         node->ty = pointer_to(node->lhs->ty->ptr_to);

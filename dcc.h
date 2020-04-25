@@ -14,6 +14,7 @@
 #include <string.h>
 
 typedef struct Type Type;
+typedef struct Member Member; // 構造体のメンバ
 
 // 入力ファイル名
 extern char *filename;
@@ -109,6 +110,7 @@ typedef enum {
   ND_ASSIGN, // =
   ND_ADDR, // &
   ND_DEREF, // *
+  ND_MEMBER, // . (構造体のメンバへのアクセス)
   ND_VAR, // ローカル変数 or グローバル変数
   ND_NUM, // 整数
   ND_RETURN, // return
@@ -142,6 +144,9 @@ struct Node {
 
   // ブロック or Statement expression
   Node *body; // kindがND_BLOCK or Statement expressionの時、含まれる式
+
+  // 構造体
+  Member *member; // kindがND_MEMBERの時、構造体のメンバ
 
   // 関数
   char *funcname; // kindがND_FUNCALLの時、関数名
@@ -179,7 +184,8 @@ typedef enum {
   TY_INT,
   TY_CHAR,
   TY_PTR,
-  TY_ARRAY
+  TY_ARRAY,
+  TY_STRUCT,
 } TypeKind;
 
 struct Type {
@@ -187,6 +193,16 @@ struct Type {
   int size; // sizeof()の値
   Type *ptr_to; // kindがTY_PTRの時、指しているTypeオブジェクトへのポインタ
   int array_len; // kindがTY_ARRAYの時、配列の長さ
+  Member *members; // kindがTY_STRUCTの時、構造体のメンバ
+};
+
+// 構造体のメンバ
+// 連結リストで管理する
+struct Member {
+  Member *next;
+  Type *ty;
+  char *name;
+  int offset;
 };
 
 bool is_integer(Type *ty);
