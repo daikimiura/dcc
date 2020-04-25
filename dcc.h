@@ -206,6 +206,23 @@ struct Member {
   int offset;
 };
 
+//
+// ブロックスコープ
+//
+
+// 構造体タグのスコープ
+typedef struct TagScope TagScope;
+struct TagScope {
+  TagScope *next;
+  char *name;
+  Type *ty;
+};
+
+typedef struct {
+  VarList *var_scope; // 変数のスコープ
+  TagScope *tag_scope; // 構造体タグのスコープ
+} Scope;
+
 bool is_integer(Type *ty);
 
 int align_to(int n, int align);

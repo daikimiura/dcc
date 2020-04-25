@@ -6,7 +6,8 @@
 
 static VarList *locals;
 static VarList *globals;
-static VarList *scope;
+static VarList *var_scope;
+static TagScope *tag_scope;
 
 // 非終端記号を表す関数のプロトタイプ宣言
 Program *program();
@@ -44,6 +45,20 @@ Node *postfix();
 Node *primary();
 
 void global_var();
+
+// ブロックスコープの開始
+Scope *enter_scope() {
+  Scope *sc = calloc(1, sizeof(Scope));
+  sc->var_scope = var_scope;
+  sc->tag_scope = tag_scope;
+  return sc;
+}
+
+// ブロックスコープの終了
+void leave_scope(Scope *sc) {
+  var_scope = sc->var_scope;
+  tag_scope = sc->tag_scope;
+}
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
@@ -177,12 +192,21 @@ Node *new_node_fun_call(char *funcname) {
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
 Var *find_var(Token *tok) {
-  for (VarList *vl = scope; vl; vl = vl->next) {
+  for (VarList *vl = var_scope; vl; vl = vl->next) {
     Var *var = vl->var;
     if (strlen(var->name) == tok->len && !strncmp(tok->str, var->name, tok->len)) {
       return var;
     }
   }
+  return NULL;
+}
+
+// 構造体タグを名前で検索する
+// 見つからなかった場合はNULLを返す
+TagScope *find_tag(Token *tok) {
+  for (TagScope *sc = tag_scope; sc; sc = sc->next)
+    if (strlen(sc->name) == tok->len == !strncmp(tok->str, sc->name, tok->len))
+      return sc;
   return NULL;
 }
 
@@ -193,16 +217,16 @@ Var *new_var(char *name, Type *ty, bool is_local) {
   var->ty = ty;
   var->is_local = is_local;
 
-  // scope(VarList)の先頭に変数を追加
+  // var_scope(VarList)の先頭に変数を追加
   VarList *sc = calloc(1, sizeof(VarList));
   sc->var = var;
-  sc->next = scope;
-  scope = sc;
+  sc->next = var_scope;
+  var_scope = sc;
 
   return var;
 }
 
-// 新しいローカル変数(Var)を連結リスト(VarListのリスト)の先頭に追加する
+// 新しいローカル変数を連結リスト(locals)の先頭に追加する
 Var *new_lvar(char *name, Type *ty) {
   Var *lvar = new_var(name, ty, true);
   VarList *vl = calloc(1, sizeof(VarList));
@@ -212,6 +236,7 @@ Var *new_lvar(char *name, Type *ty) {
   return lvar;
 }
 
+// 新しいグローバル変数を連結リスト(globals)の先頭に追加する
 Var *new_gvar(char *name, Type *ty) {
   Var *gvar = new_var(name, ty, false);
   VarList *vl = calloc(1, sizeof(VarList));
@@ -219,6 +244,15 @@ Var *new_gvar(char *name, Type *ty) {
   vl->next = globals;
   globals = vl;
   return gvar;
+}
+
+//  新しい構造体タグを連結リスト(tag_scope)の先頭に追加する
+void push_tag_scope(Token *tag, Type *ty) {
+  TagScope *sc = calloc(1, sizeof(TagScope));
+  sc->next = tag_scope;
+  sc->name = strndup(tag->str, tag->len);
+  sc->ty = ty;
+  tag_scope = sc;
 }
 
 // 配列宣言時の型のsuffix(配列の要素数)を読み取る
@@ -319,7 +353,7 @@ Function *function() {
   fn->name = expect_ident();
   expect("(");
 
-  VarList *sc = scope;
+  Scope *sc = enter_scope();
   fn->params = read_func_params();
   expect("{");
 
@@ -332,16 +366,26 @@ Function *function() {
     cur = cur->next;
   }
   // スコープを戻す
-  scope = sc;
+  leave_scope(sc);
 
   fn->node = head.next;
   fn->locals = locals;
   return fn;
 }
 
-// struct-decl = "struct" "{" struct-member "}"
+// struct-decl = "struct" ident
+//             | "struct" ident? "{" struct-member "}"
 Type *struct_decl() {
   expect("struct");
+
+  Token *tag = consume_ident(); // 構造体タグ
+  if (tag && !peek("{")) { // 構造体タグを用いた宣言のとき
+    TagScope *sc = find_tag(tag);
+    if (!sc)
+      error_at(tag->str, "構造体タグが定義されていません");
+    return sc->ty;
+  }
+
   expect("{");
 
   // メンバを連結リストで管理
@@ -369,6 +413,9 @@ Type *struct_decl() {
       ty->align = mem->ty->align;
   }
   ty->size = align_to(offset, ty->align);
+
+  if (tag)
+    push_tag_scope(tag, ty);
 
   return ty;
 }
@@ -474,12 +521,12 @@ Node *stmt2() {
     Node head = {};
     Node *cur = &head;
 
-    VarList *sc = scope;
+    Scope *sc = enter_scope();
     while (!consume("}")) {
       cur->next = stmt();
       cur = cur->next;
     }
-    scope = sc;
+    leave_scope(sc);
 
     node->body = head.next;
     return node;
@@ -494,8 +541,11 @@ Node *stmt2() {
 }
 
 // declaration = basetype ident ("[" num "]")* ("=" expr) ";"
+//             | basetype ";"  // 構造体タグを用いた構造体の宣言
 Node *declaration() {
   Type *ty = basetype();
+  if (consume(";"))
+    return new_node_null();
 
   char *name = expect_ident();
   ty = read_type_suffix(ty);
@@ -653,12 +703,12 @@ Node *stmt_expr_tail() {
   node->body = stmt();
   Node *cur = node->body;
 
-  VarList *sc = scope;
+  Scope *sc = enter_scope();
   while (!consume("}")) {
     cur->next = stmt();
     cur = cur->next;
   }
-  scope = sc;
+  leave_scope(sc);
   expect(")");
 
   if (cur->kind != ND_EXPR_STMT)
@@ -700,7 +750,7 @@ Node *primary() {
 
     Var *var = find_var(tok);
     if (!var) {
-      error("undefined variable");
+      error_at(tok->str, "変数が定義されていません");
     }
     return new_node_var(var);
   }

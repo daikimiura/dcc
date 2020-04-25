@@ -673,8 +673,58 @@ int main() {
     sizeof(x);
   }), "struct {char a; char b;} x; sizeof(x);");
 
-  assert(15, ({ int x; char y; int a=&x; int b=&y; b-a; }), "int x; char y; int a=&x; int b=&y; b-a;");
-  assert(1, ({ char x; int y; int a=&x; int b=&y; b-a; }), "char x; int y; int a=&x; int b=&y; b-a;");
+  assert(15, ({
+    int x;
+    char y;
+    int a = &x;
+    int b = &y;
+    b - a;
+  }), "int x; char y; int a=&x; int b=&y; b-a;");
+  assert(1, ({
+    char x;
+    int y;
+    int a = &x;
+    int b = &y;
+    b - a;
+  }), "char x; int y; int a=&x; int b=&y; b-a;");
+
+  assert(16, ({
+    struct t {
+      int a;
+      int b;
+    } x;
+    struct t y;
+    sizeof(y);
+  }), "struct t {int a; int b;} x; struct t y; sizeof(y);");
+  assert(16, ({
+    struct t {
+      int a;
+      int b;
+    };
+    struct t y;
+    sizeof(y);
+  }), "struct t {int a; int b;}; struct t y; sizeof(y);");
+  assert(2, ({
+    struct t {
+      char a[2];
+    };
+    {
+      struct t {
+        char a[4];
+      };
+    }
+    struct t y;
+    sizeof(y);
+  }), "struct t {char a[2];}; { struct t {char a[4];}; } struct t y; sizeof(y);");
+  assert(3, ({
+    struct st_x {
+      int x;
+    };
+    int st_x = 1;
+    struct my_struct y;
+    y.x = 2;
+    st_x + y.x;
+  }), "struct my_struct {int x;}; int t=1; struct t y; y.x=2; t+y.x;");
 
   printf("OK\n");
   return 0;
