@@ -725,6 +725,22 @@ int main() {
     y.x = 2;
     st_x + y.x;
   }), "struct my_struct {int x;}; int t=1; struct t y; y.x=2; t+y.x;");
+  assert(3, ({
+    struct t {
+      char a;
+    } x;
+    struct t *y = &x;
+    x.a = 3;
+    y->a;
+  }), "struct t {char a;} x; struct t *y = &x; x.a=3; y->a;");
+  assert(3, ({
+    struct t {
+      char a;
+    } x;
+    struct t *y = &x;
+    y->a = 3;
+    x.a;
+  }), "struct t {char a;} x; struct t *y = &x; y->a=3; x.a;");
 
   printf("OK\n");
   return 0;

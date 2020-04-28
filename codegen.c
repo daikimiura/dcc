@@ -46,7 +46,7 @@ void gen_addr(Node *node) {
       gen(node->lhs);
       return;
     case ND_MEMBER:
-      // struct型の変数のアドレスを取得
+      // 構造体の先頭アドレスを取得
       gen_addr(node->lhs);
       printf("  pop rax\n");
       // 取得したアドレスからoffset分上のアドレスに欲しいメンバのアドレスがある

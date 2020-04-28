@@ -675,7 +675,7 @@ Node *struct_ref(Node *lhs) {
   return node;
 }
 
-// postfix = primary ("[" expr "]" | "." ident)*
+// postfix = primary ("[" expr "]" | "." ident | "->" ident)*
 Node *postfix() {
   Node *node = primary();
 
@@ -689,6 +689,13 @@ Node *postfix() {
     }
 
     if (consume(".")) {
+      node = struct_ref(node);
+      continue;
+    }
+
+    if (consume("->")) {
+      // x->y は (*x).y の糖衣構文
+      node = new_node_unary(ND_DEREF, node);
       node = struct_ref(node);
       continue;
     }
