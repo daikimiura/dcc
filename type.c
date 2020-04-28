@@ -4,7 +4,7 @@
 
 #include "dcc.h"
 
-Type *int_type = &(Type) {TY_INT, 8, 8};
+Type *int_type = &(Type) {TY_INT, 4, 4};
 
 Type *char_type = &(Type) {TY_CHAR, 1, 1};
 

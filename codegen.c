@@ -16,6 +16,9 @@ static char *funcname;
 // x86_64のABI(Application Binary Interface)で決まっている
 static char *argreg8[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
+// 32bitの引数を保持するためのレジスタ
+static char *argreg4[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
+
 // 8bitの引数を保持するためのレジスタ
 static char *argreg1[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 
@@ -62,10 +65,15 @@ void gen_addr(Node *node) {
 void load(Type *ty) {
   printf("  pop rax\n");
   if (ty->size == 1)
-    // RAXが指しているアドレスから1バイトを読み込んで、符号拡張してRAXに入れる
+    // RAXが指しているアドレスから8bitを読み込んで、符号拡張してRAXに入れる
     printf("  movsx rax, byte ptr [rax]\n");
-  else
+  else if (ty->size == 4)
+    // RAXが指しているアドレスから32bitを読み込んで、符号拡張してRAXに入れる
+    printf("  movsxd rax, dword ptr [rax]\n");
+  else {
+    assert(ty->size == 8);
     printf("  mov rax, [rax]\n");
+  }
   printf("  push rax\n");
 }
 
@@ -78,8 +86,13 @@ void store(Type *ty) {
     // DILはRDIの下位8bit
     // https://www.sigbus.info/compilerbook#%E6%95%B4%E6%95%B0%E3%83%AC%E3%82%B8%E3%82%B9%E3%82%BF%E3%81%AE%E4%B8%80%E8%A6%A7
     printf("  mov [rax], dil\n");
-  else
+  else if (ty->size == 4)
+    // EDIはRDIの下位32bit
+    printf("  mov [rax], edi\n");
+  else {
+    assert(ty->size == 8);
     printf("  mov [rax], rdi\n");
+  }
   printf("  push rdi\n");
 }
 
@@ -304,6 +317,8 @@ void load_arg(Var *var, int idx) {
   int sz = var->ty->size;
   if (sz == 1) {
     printf("  mov[rbp-%d], %s\n", var->offset, argreg1[idx]);
+  } else if (sz == 4) {
+    printf("  mov[rbp-%d], %s\n", var->offset, argreg4[idx]);
   } else {
     printf("  mov[rbp-%d], %s\n", var->offset, argreg8[idx]);
   }

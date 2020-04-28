@@ -5,6 +5,7 @@
 #ifndef DCC_DCC_H
 #define DCC_DCC_H
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>

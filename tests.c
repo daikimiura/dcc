@@ -377,11 +377,11 @@ int main() {
     x[2][0];
   }), "int x[2][3]; int *y=x; y[6]=6; x[2][0];");
 
-  assert(8, ({
+  assert(4, ({
     int x;
     sizeof(x);
   }), "int x; sizeof(x);");
-  assert(8, ({
+  assert(4, ({
     int x;
     sizeof x;
   }), "int x; sizeof x;");
@@ -389,31 +389,31 @@ int main() {
     int *x;
     sizeof(x);
   }), "int *x; sizeof(x);");
-  assert(32, ({
+  assert(16, ({
     int x[4];
     sizeof(x);
   }), "int x[4]; sizeof(x);");
-  assert(96, ({
+  assert(48, ({
     int x[3][4];
     sizeof(x);
   }), "int x[3][4]; sizeof(x);");
-  assert(32, ({
+  assert(16, ({
     int x[3][4];
     sizeof(*x);
   }), "int x[3][4]; sizeof(*x);");
-  assert(8, ({
+  assert(4, ({
     int x[3][4];
     sizeof(**x);
   }), "int x[3][4]; sizeof(**x);");
-  assert(9, ({
+  assert(5, ({
     int x[3][4];
     sizeof(**x) + 1;
   }), "int x[3][4]; sizeof(**x) + 1;");
-  assert(9, ({
+  assert(5, ({
     int x[3][4];
     sizeof **x + 1;
   }), "int x[3][4]; sizeof **x + 1;");
-  assert(8, ({
+  assert(4, ({
     int x[3][4];
     sizeof(**x + 1);
   }), "int x[3][4]; sizeof(**x + 1);");
@@ -431,8 +431,8 @@ int main() {
   assert(2, g2[2], "g2[2]");
   assert(3, g2[3], "g2[3]");
 
-  assert(8, sizeof(g1), "sizeof(g1)");
-  assert(32, sizeof(g2), "sizeof(g2)");
+  assert(4, sizeof(g1), "sizeof(g1)");
+  assert(16, sizeof(g2), "sizeof(g2)");
 
   assert(1, ({
     char x = 1;
@@ -620,32 +620,32 @@ int main() {
     x.a.b;
   }), "struct { struct { int b; } a; } x; x.a.b=6; x.a.b;");
 
-  assert(8, ({
+  assert(4, ({
     struct {
       int a;
     } x;
     sizeof(x);
   }), "struct {int a;} x; sizeof(x);");
-  assert(16, ({
+  assert(8, ({
     struct {
       int a;
       int b;
     } x;
     sizeof(x);
   }), "struct {int a; int b;} x; sizeof(x);");
-  assert(24, ({
+  assert(12, ({
     struct {
       int a[3];
     } x;
     sizeof(x);
   }), "struct {int a[3];} x; sizeof(x);");
-  assert(32, ({
+  assert(16, ({
     struct {
       int a;
     } x[4];
     sizeof(x);
   }), "struct {int a;} x[4]; sizeof(x);");
-  assert(48, ({
+  assert(24, ({
     struct {
       int a[3];
     } x[2];
@@ -658,7 +658,7 @@ int main() {
     } x;
     sizeof(x);
   }), "struct {char a; char b;} x; sizeof(x);");
-  assert(16, ({
+  assert(8, ({
     struct {
       char a;
       int b;
@@ -673,11 +673,13 @@ int main() {
     sizeof(x);
   }), "struct {char a; char b;} x; sizeof(x);");
 
-  assert(15, ({
+  assert(7, ({
     int x;
     char y;
     int a = &x;
     int b = &y;
+    // y => x の順にlocalsの先頭に追加される
+    // yの格納されたアドレスをadとすると、xが格納されるのはad + [ad+4 以上の4の倍数のうち最小のもの]
     b - a;
   }), "int x; char y; int a=&x; int b=&y; b-a;");
   assert(1, ({
@@ -688,7 +690,7 @@ int main() {
     b - a;
   }), "char x; int y; int a=&x; int b=&y; b-a;");
 
-  assert(16, ({
+  assert(8, ({
     struct t {
       int a;
       int b;
@@ -696,7 +698,7 @@ int main() {
     struct t y;
     sizeof(y);
   }), "struct t {int a; int b;} x; struct t y; sizeof(y);");
-  assert(16, ({
+  assert(8, ({
     struct t {
       int a;
       int b;
