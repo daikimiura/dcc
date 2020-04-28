@@ -210,6 +210,15 @@ struct Member {
 // ブロックスコープ
 //
 
+// ローカル変数/グローバル変数/typedef のスコープ
+typedef struct VarScope VarScope;
+struct VarScope {
+  VarScope *next;
+  char *name;
+  Var *var;
+  Type *type_def; // typedefのとき、型の実体
+};
+
 // 構造体タグのスコープ
 typedef struct TagScope TagScope;
 struct TagScope {
@@ -219,7 +228,7 @@ struct TagScope {
 };
 
 typedef struct {
-  VarList *var_scope; // 変数のスコープ
+  VarScope *var_scope; // 変数のスコープ
   TagScope *tag_scope; // 構造体タグのスコープ
 } Scope;
 

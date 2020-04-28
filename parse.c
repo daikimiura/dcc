@@ -6,7 +6,7 @@
 
 static VarList *locals;
 static VarList *globals;
-static VarList *var_scope;
+static VarScope *var_scope;
 static TagScope *tag_scope;
 
 // 非終端記号を表す関数のプロトタイプ宣言
@@ -191,13 +191,23 @@ Node *new_node_fun_call(char *funcname) {
 
 // 変数を名前で検索する
 // 見つからなかった場合はNULLを返す
-Var *find_var(Token *tok) {
-  for (VarList *vl = var_scope; vl; vl = vl->next) {
-    Var *var = vl->var;
-    if (strlen(var->name) == tok->len && !strncmp(tok->str, var->name, tok->len)) {
-      return var;
+VarScope *find_var(Token *tok) {
+  for (VarScope *sc = var_scope; sc; sc = sc->next) {
+    if (strlen(sc->name) == tok->len && !strncmp(tok->str, sc->name, tok->len)) {
+      return sc;
     }
   }
+  return NULL;
+}
+
+// typedefを検索する
+Type *find_typedef(Token *tok) {
+  if (tok->kind == TK_IDENT) {
+    VarScope *sc = find_var(tok);
+    if (sc)
+      return sc->type_def;
+  }
+
   return NULL;
 }
 
@@ -210,6 +220,15 @@ TagScope *find_tag(Token *tok) {
   return NULL;
 }
 
+// var_scopeの先頭に変数/typedefを追加
+VarScope *push_var_scope(char *name) {
+  VarScope *sc = calloc(1, sizeof(VarScope));
+  sc->name = name;
+  sc->next = var_scope;
+  var_scope = sc;
+  return sc;
+}
+
 // 新しいローカル変数 or グローバル変数 を追加する
 Var *new_var(char *name, Type *ty, bool is_local) {
   Var *var = calloc(1, sizeof(Var));
@@ -217,18 +236,14 @@ Var *new_var(char *name, Type *ty, bool is_local) {
   var->ty = ty;
   var->is_local = is_local;
 
-  // var_scope(VarList)の先頭に変数を追加
-  VarList *sc = calloc(1, sizeof(VarList));
-  sc->var = var;
-  sc->next = var_scope;
-  var_scope = sc;
-
   return var;
 }
 
 // 新しいローカル変数を連結リスト(locals)の先頭に追加する
 Var *new_lvar(char *name, Type *ty) {
   Var *lvar = new_var(name, ty, true);
+  push_var_scope(name)->var = lvar;
+
   VarList *vl = calloc(1, sizeof(VarList));
   vl->var = lvar;
   vl->next = locals;
@@ -239,6 +254,8 @@ Var *new_lvar(char *name, Type *ty) {
 // 新しいグローバル変数を連結リスト(globals)の先頭に追加する
 Var *new_gvar(char *name, Type *ty) {
   Var *gvar = new_var(name, ty, false);
+  push_var_scope(name)->var = gvar;
+
   VarList *vl = calloc(1, sizeof(VarList));
   vl->var = gvar;
   vl->next = globals;
@@ -290,7 +307,7 @@ VarList *read_func_params() {
 }
 
 bool is_typename() {
-  return peek("char") || peek("int") || peek("struct");
+  return peek("char") || peek("int") || peek("struct") || find_typedef(token);
 }
 
 // program() が function() かどうか判定する
@@ -376,8 +393,6 @@ Function *function() {
 // struct-decl = "struct" ident
 //             | "struct" ident? "{" struct-member "}"
 Type *struct_decl() {
-  expect("struct");
-
   Token *tag = consume_ident(); // 構造体タグ
   if (tag && !peek("{")) { // 構造体タグを用いた宣言のとき
     TagScope *sc = find_tag(tag);
@@ -430,15 +445,17 @@ Member *struct_member() {
   return mem;
 }
 
-// basetype = ( "int" | "char" | struct-decl ) "*"*
+// basetype = ( "int" | "char" | struct-decl | typedef-name) "*"*
 Type *basetype() {
   Type *ty;
   if (consume("char"))
     ty = char_type;
   else if (consume("int"))
     ty = int_type;
-  else
+  else if (consume("struct"))
     ty = struct_decl();
+  else
+    ty = find_var(consume_ident())->type_def;
 
   while (consume("*")) {
     ty = pointer_to(ty);
@@ -459,6 +476,7 @@ Node *stmt(void) {
 //      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //      | expr ";"
 //      | "{" stmt* "}"
+//      | "typedef" basetype ident ("[" num "]")*;
 //      | declaration
 Node *stmt2() {
   if (consume("return")) {
@@ -530,6 +548,15 @@ Node *stmt2() {
 
     node->body = head.next;
     return node;
+  }
+
+  if (consume("typedef")) {
+    Type *ty = basetype();
+    char *name = expect_ident();
+    ty = read_type_suffix(ty);
+    expect(";");
+    push_var_scope(name)->type_def = ty;
+    return new_node_null();
   }
 
   if (is_typename())
@@ -755,11 +782,10 @@ Node *primary() {
       return node;
     }
 
-    Var *var = find_var(tok);
-    if (!var) {
-      error_at(tok->str, "変数が定義されていません");
-    }
-    return new_node_var(var);
+    VarScope *sc = find_var(tok);
+    if (sc && sc->var)
+      return new_node_var(sc->var);
+    error_at(tok->str, "変数が定義されていません");
   }
 
   tok = token;
