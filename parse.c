@@ -307,7 +307,8 @@ VarList *read_func_params() {
 }
 
 bool is_typename() {
-  return peek("char") || peek("int") || peek("struct") || find_typedef(token);
+  return peek("char") || peek("int") || peek("short") || peek("long") ||
+         peek("struct") || find_typedef(token);
 }
 
 // program() が function() かどうか判定する
@@ -445,13 +446,17 @@ Member *struct_member() {
   return mem;
 }
 
-// basetype = ( "int" | "char" | struct-decl | typedef-name) "*"*
+// basetype = ( "int" | "short" | "long" | "char" | struct-decl | typedef-name) "*"*
 Type *basetype() {
   Type *ty;
   if (consume("char"))
     ty = char_type;
   else if (consume("int"))
     ty = int_type;
+  else if (consume("short"))
+    ty = short_type;
+  else if (consume("long"))
+    ty = long_type;
   else if (consume("struct"))
     ty = struct_decl();
   else

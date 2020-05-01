@@ -12,14 +12,17 @@ static int labelseq = 1;
 // 実行中の関数の名前
 static char *funcname;
 
-// 64bitの引数を保持するためのレジスタ
+// 64bitの値を保持するためのレジスタ
 // x86_64のABI(Application Binary Interface)で決まっている
 static char *argreg8[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
-// 32bitの引数を保持するためのレジスタ
+// 32bitの値を保持するためのレジスタ
 static char *argreg4[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
 
-// 8bitの引数を保持するためのレジスタ
+// 16bitの値を保持するためのレジスタ
+static char *argreg2[] = {"di", "si", "dx", "cx", "r8w", "r9w"};
+
+// 8bitの値を保持するためのレジスタ
 static char *argreg1[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 
 // 与えられたノードが変数を指しているときに、その変数のアドレスを計算して、それをスタックにプッシュする
@@ -67,6 +70,9 @@ void load(Type *ty) {
   if (ty->size == 1)
     // RAXが指しているアドレスから8bitを読み込んで、符号拡張してRAXに入れる
     printf("  movsx rax, byte ptr [rax]\n");
+  else if (ty->size == 2)
+    // RAXが指しているアドレスから16bitを読み込んで、符号拡張してRAXに入れる
+    printf("  movsx rax, word ptr [rax]\n");
   else if (ty->size == 4)
     // RAXが指しているアドレスから32bitを読み込んで、符号拡張してRAXに入れる
     printf("  movsxd rax, dword ptr [rax]\n");
@@ -86,6 +92,9 @@ void store(Type *ty) {
     // DILはRDIの下位8bit
     // https://www.sigbus.info/compilerbook#%E6%95%B4%E6%95%B0%E3%83%AC%E3%82%B8%E3%82%B9%E3%82%BF%E3%81%AE%E4%B8%80%E8%A6%A7
     printf("  mov [rax], dil\n");
+  else if (ty->size == 2)
+    // EDIはRDIの下位32bit
+    printf("  mov [rax], di\n");
   else if (ty->size == 4)
     // EDIはRDIの下位32bit
     printf("  mov [rax], edi\n");
@@ -317,9 +326,12 @@ void load_arg(Var *var, int idx) {
   int sz = var->ty->size;
   if (sz == 1) {
     printf("  mov[rbp-%d], %s\n", var->offset, argreg1[idx]);
+  } else if (sz == 2) {
+    printf("  mov[rbp-%d], %s\n", var->offset, argreg2[idx]);
   } else if (sz == 4) {
     printf("  mov[rbp-%d], %s\n", var->offset, argreg4[idx]);
   } else {
+    assert(sz == 8);
     printf("  mov[rbp-%d], %s\n", var->offset, argreg8[idx]);
   }
 }
