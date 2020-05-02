@@ -22,6 +22,10 @@ Member *struct_member();
 
 Type *basetype();
 
+Type *declarator(Type *ty, char **name);
+
+Type *type_suffix(Type *ty);
+
 Node *stmt();
 
 Node *stmt2();
@@ -273,18 +277,21 @@ void push_tag_scope(Token *tag, Type *ty) {
 }
 
 // 配列宣言時の型のsuffix(配列の要素数)を読み取る
-Type *read_type_suffix(Type *ptr_to) {
+// type-suffix = ("[" num "]" type-suffix)?
+Type *type_suffix(Type *ty) {
   if (!consume("["))
-    return ptr_to;
+    return ty;
   int size = expect_number();
   expect("]");
-  ptr_to = read_type_suffix(ptr_to);
-  return array_of(ptr_to, size);
+  ty = type_suffix(ty);
+  return array_of(ty, size);
 }
 
 VarList *read_func_param() {
   Type *ty = basetype();
-  char *name = expect_ident();
+  char *name = NULL;
+  ty = declarator(ty, &name);
+  ty = type_suffix(ty);
   VarList *vl = calloc(1, sizeof(VarList));
   vl->var = new_lvar(name, ty);
   return vl;
@@ -350,25 +357,29 @@ Program *program() {
   return prog;
 }
 
-// global-var = basetype ident ("[" num "]")* ";"
+// global-var = basetype declarator ("[" num "]")* ";"
 void global_var() {
   Type *ty = basetype();
-  char *name = expect_ident();
-  ty = read_type_suffix(ty);
+  char *name = NULL;
+  ty = declarator(ty, &name);
+  ty = type_suffix(ty);
   expect(";");
   new_gvar(name, ty);
 }
 
-// function = basetype ident "(" params? ")" "{" stmt* "}"
+// function = basetype declarator "(" params? ")" "{" stmt* "}"
 // params = param ("," param)*
-// param = basetype ident
+// param = basetype declarator
 Function *function() {
   locals = NULL;
 
-  Function *fn = calloc(1, sizeof(Function));
+  Type *ty = basetype();
+  char *name = NULL;
+  declarator(ty, &name);
 
-  basetype();
-  fn->name = expect_ident();
+  Function *fn = calloc(1, sizeof(Function));
+  fn->name = name;
+
   expect("(");
 
   Scope *sc = enter_scope();
@@ -436,17 +447,21 @@ Type *struct_decl() {
   return ty;
 }
 
-// struct-member = basetype ident ("[" num "]")*
+// struct-member = basetype declarator ";"
 Member *struct_member() {
-  Member *mem = calloc(1, sizeof(Member));
-  mem->ty = basetype();
-  mem->name = expect_ident();
-  mem->ty = read_type_suffix(mem->ty);
+  Type *ty = basetype();
+  char *name = NULL;
+  ty = declarator(ty, &name);
   expect(";");
+
+  Member *mem = calloc(1, sizeof(Member));
+  mem->name = name;
+  mem->ty = ty;
   return mem;
 }
 
-// basetype = ( "int" | "short" | "long" | "char" | struct-decl | typedef-name) "*"*
+// basetype = builtin-typename | struct-decl | typdef-name
+// builtin-typename = "int" | "short" | "long" | "char"
 Type *basetype() {
   Type *ty;
   if (consume("char"))
@@ -462,10 +477,30 @@ Type *basetype() {
   else
     ty = find_var(consume_ident())->type_def;
 
-  while (consume("*")) {
-    ty = pointer_to(ty);
-  }
   return ty;
+}
+
+// declarator = "*"* ("(" declarator ")" | ident) type-suffix
+// ex.) int *x[3];
+//      int (*x)[3];
+// http://enakai00.hatenablog.com/entry/20110808/1312783316
+Type *declarator(Type *ty, char **name) {
+  while (consume("*"))
+    ty = pointer_to(ty);
+
+  if (consume("(")) {
+    // 例えば、int (*x)[3] をパースするとき
+    // *new_ty は placeholderへのポインタ型になり、*nameは "x" になる
+    // memcpy で placeholder をint型に更新している
+    Type *placeholder = calloc(1, sizeof(Type));
+    Type *new_ty = declarator(placeholder, name);
+    expect(")");
+    memcpy(placeholder, type_suffix(ty), sizeof(Type));
+    return new_ty;
+  }
+
+  *name = expect_ident();
+  return type_suffix(ty);
 }
 
 // stmtの中身をトラバースして型をつける
@@ -481,7 +516,7 @@ Node *stmt(void) {
 //      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //      | expr ";"
 //      | "{" stmt* "}"
-//      | "typedef" basetype ident ("[" num "]")*;
+//      | "typedef" basetype declarator;
 //      | declaration
 Node *stmt2() {
   if (consume("return")) {
@@ -557,8 +592,9 @@ Node *stmt2() {
 
   if (consume("typedef")) {
     Type *ty = basetype();
-    char *name = expect_ident();
-    ty = read_type_suffix(ty);
+    char *name = NULL;
+    ty = declarator(ty, &name);
+    ty = type_suffix(ty);
     expect(";");
     push_var_scope(name)->type_def = ty;
     return new_node_null();
@@ -572,15 +608,16 @@ Node *stmt2() {
   return node;
 }
 
-// declaration = basetype ident ("[" num "]")* ("=" expr) ";"
-//             | basetype ";"  // 構造体タグを用いた構造体の宣言
+// declaration = basetype declarator ("=" expr) ";"
+//             | basetype declarator ";"  // 構造体タグを用いた構造体の宣言
 Node *declaration() {
   Type *ty = basetype();
   if (consume(";"))
     return new_node_null();
 
-  char *name = expect_ident();
-  ty = read_type_suffix(ty);
+  char *name = NULL;
+  ty = declarator(ty, &name);
+  ty = type_suffix(ty);
   Var *lvar = new_lvar(name, ty);
 
   if (consume(";"))
