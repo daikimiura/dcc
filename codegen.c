@@ -88,6 +88,16 @@ void load(Type *ty) {
 void store(Type *ty) {
   printf("  pop rdi\n");
   printf("  pop rax\n");
+
+  if (ty->kind == TY_BOOL) {
+    // true: 1, false: 0
+    // _Bool型で1以上の整数だった場合はtrueとして扱う
+    printf("  cmp rdi, 0\n");
+    printf("  setne dil\n");
+    // dilの値を符号拡張せずにrdiに保存する
+    printf("  movzx rdi, dil\n");
+  }
+
   if (ty->size == 1)
     // DILはRDIの下位8bit
     // https://www.sigbus.info/compilerbook#%E6%95%B4%E6%95%B0%E3%83%AC%E3%82%B8%E3%82%B9%E3%82%BF%E3%81%AE%E4%B8%80%E8%A6%A7

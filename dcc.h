@@ -189,6 +189,7 @@ typedef enum {
   TY_SHORT,
   TY_LONG,
   TY_CHAR,
+  TY_BOOL,
   TY_PTR,
   TY_ARRAY,
   TY_STRUCT,
@@ -255,6 +256,7 @@ Type *int_type;
 Type *short_type;
 Type *long_type;
 Type *void_type;
+Type *bool_type;
 
 
 Type *array_of(Type *pointer_to, int size);
