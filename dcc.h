@@ -184,6 +184,7 @@ void codegen(Program *prog);
 //
 
 typedef enum {
+  TY_VOID,
   TY_INT,
   TY_SHORT,
   TY_LONG,
@@ -253,6 +254,7 @@ Type *char_type;
 Type *int_type;
 Type *short_type;
 Type *long_type;
+Type *void_type;
 
 
 Type *array_of(Type *pointer_to, int size);

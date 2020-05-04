@@ -6,6 +6,8 @@ int printf();
 
 int exit();
 
+void void_func();
+
 int g1;
 int g2[4];
 
@@ -839,6 +841,8 @@ int main() {
     *y[0];
   }), "int x[3]; int (*y)[3]=x; y[0][0]=4; y[0][0];");
   assert(3, *g1_ptr(), "*g1_ptr()");
+
+  { void *x; }
 
   printf("OK\n");
   return 0;
