@@ -857,6 +857,11 @@ int main() {
     x;
   }), "_Bool x=2; x;");
 
+  assert(8, ({
+    long long x;
+    sizeof(x);
+  }), "long long x; sizeof(x);");
+
   printf("OK\n");
   return 0;
 }

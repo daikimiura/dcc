@@ -487,9 +487,11 @@ Type *basetype() {
     ty = int_type;
   else if (consume("short"))
     ty = short_type;
-  else if (consume("long"))
+  else if (consume("long")) {
+    // `long long` は `long` のエイリアス
+    consume("long");
     ty = long_type;
-  else if (consume("struct"))
+  } else if (consume("struct"))
     ty = struct_decl();
   else if (consume("void"))
     ty = void_type;
