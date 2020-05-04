@@ -34,6 +34,12 @@ Type *array_of(Type *pointer_to, int len) {
   return ty;
 }
 
+Type *func_type(Type *return_ty) {
+  Type *ty = new_type(TY_FUNC, 1, 1);
+  ty->return_ty = return_ty;
+  return ty;
+}
+
 // n以上の整数のうち、alignで割り切れる最小の整数を返す
 // alignは2の冪乗
 // align_to(33, 8) => 40

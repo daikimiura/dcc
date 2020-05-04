@@ -72,6 +72,8 @@ void error(char *fmt, ...);
 
 void error_at(char *loc, char *fmt, ...);
 
+void warn_at(char *loc, char *fmt, ...);
+
 bool consume(char *op);
 
 Token *peek(char *op);
@@ -189,6 +191,7 @@ typedef enum {
   TY_PTR,
   TY_ARRAY,
   TY_STRUCT,
+  TY_FUNC,
 } TypeKind;
 
 struct Type {
@@ -198,6 +201,7 @@ struct Type {
   Type *ptr_to; // kindがTY_PTRの時、指しているTypeオブジェクトへのポインタ
   int array_len; // kindがTY_ARRAYの時、配列の長さ
   Member *members; // kindがTY_STRUCTの時、構造体のメンバ
+  Type *return_ty; // kindがTY_FUNCの時、関数の戻り値の型
 };
 
 // 構造体のメンバ
@@ -240,6 +244,8 @@ bool is_integer(Type *ty);
 int align_to(int n, int align);
 
 Type *pointer_to(Type *ptr_to);
+
+Type *func_type(Type *return_ty);
 
 void add_type(Node *node);
 

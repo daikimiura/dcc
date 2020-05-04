@@ -23,10 +23,7 @@ void error(char *fmt, ...) {
 //
 // foo.c:10: x = y + + 5;
 //                   ^ 式ではありません
-void error_at(char *loc, char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-
+void verror_at(char *loc, char *fmt, va_list ap) {
   // locが含まれる行の開始地点と終了地点を取得
   char *line = loc;
   while (user_input < line && line[-1] != '\n')
@@ -52,6 +49,19 @@ void error_at(char *loc, char *fmt, ...) {
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
   exit(1);
+}
+
+void error_at(char *loc, char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  verror_at(loc, fmt, ap);
+  exit(1);
+}
+
+void warn_at(char *loc, char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  verror_at(loc, fmt, ap);
 }
 
 // 現在のトークンが期待している記号の時には、現在のトークンを返す

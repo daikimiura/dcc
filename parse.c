@@ -255,15 +255,18 @@ Var *new_lvar(char *name, Type *ty) {
   return lvar;
 }
 
-// 新しいグローバル変数を連結リスト(globals)の先頭に追加する
-Var *new_gvar(char *name, Type *ty) {
+// 新しいグローバル変数 or 関数の名前と戻り値の型 をスコープに追加する
+// もしemitがtrueならグローバル変数を管理する連結リスト(globals)の先頭にも追加する
+Var *new_gvar(char *name, Type *ty, bool emit) {
   Var *gvar = new_var(name, ty, false);
   push_var_scope(name)->var = gvar;
 
-  VarList *vl = calloc(1, sizeof(VarList));
-  vl->var = gvar;
-  vl->next = globals;
-  globals = vl;
+  if (emit) {
+    VarList *vl = calloc(1, sizeof(VarList));
+    vl->var = gvar;
+    vl->next = globals;
+    globals = vl;
+  }
   return gvar;
 }
 
@@ -322,9 +325,11 @@ bool is_typename() {
 bool is_function() {
   Token *tok = token;
   // tokenを先読みして判定
-  // basetype ident ( ... ならfunc
-  basetype();
-  bool is_func = consume_ident() && consume("(");
+  // basetype declarator ( ... ならfunc
+  Type *ty = basetype();
+  char *name = NULL;
+  declarator(ty, &name);
+  bool is_func = name && consume("(");
   token = tok;
   return is_func;
 };
@@ -367,7 +372,7 @@ void global_var() {
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
   expect(";");
-  new_gvar(name, ty);
+  new_gvar(name, ty, true);
 }
 
 // function = basetype declarator "(" params? ")" ("{" stmt* "}" | ";")
@@ -378,7 +383,10 @@ Function *function() {
 
   Type *ty = basetype();
   char *name = NULL;
-  declarator(ty, &name);
+  ty = declarator(ty, &name);
+
+  // 関数の名前と戻り値の型をスコープに追加する
+  new_gvar(name, func_type(ty), false);
 
   Function *fn = calloc(1, sizeof(Function));
   fn->name = name;
@@ -830,6 +838,17 @@ Node *primary() {
   if ((tok = consume_ident())) {
     if (consume("(")) {
       Node *node = new_node_fun_call(strndup(tok->str, tok->len));
+      add_type(node);
+
+      VarScope *sc = find_var(tok);
+      if (sc) {
+        if (!sc->var || sc->var->ty->kind != TY_FUNC)
+          error_at(tok->str, "関数ではありません");
+        node->ty = sc->var->ty->return_ty;
+      } else {
+        warn_at(tok->str, "関数の暗黙的な宣言が使われました");
+        node->ty = int_type; // とりあえずintにしておく
+      }
       return node;
     }
 
@@ -844,7 +863,7 @@ Node *primary() {
     token = token->next;
 
     Type *ty = array_of(char_type, tok->cont_len);
-    Var *var = new_gvar(new_label(), ty);
+    Var *var = new_gvar(new_label(), ty, true);
     var->contents = tok->contents;
     var->cont_len = tok->cont_len;
     return new_node_var(var);

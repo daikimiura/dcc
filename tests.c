@@ -51,6 +51,9 @@ int sub_long(long a, long b, long c) {
   return a - b - c;
 }
 
+int *g1_ptr() {
+  return &g1;
+}
 
 int fib(int x) {
   if (x <= 1)
@@ -835,6 +838,7 @@ int main() {
     y[0][0] = 4; // y[0][0] == *(y[0] + 0) == *y[0]
     *y[0];
   }), "int x[3]; int (*y)[3]=x; y[0][0]=4; y[0][0];");
+  assert(3, *g1_ptr(), "*g1_ptr()");
 
   printf("OK\n");
   return 0;
