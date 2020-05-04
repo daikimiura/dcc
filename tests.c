@@ -2,6 +2,10 @@
 // Created by 三浦大輝 on 2020/04/24.
 //
 
+int printf();
+
+int exit();
+
 int g1;
 int g2[4];
 

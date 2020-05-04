@@ -343,7 +343,10 @@ Program *program() {
 
   while (!at_eof()) {
     if (is_function()) {
-      cur->next = function();
+      Function *fn = function();
+      if (!fn) // 関数のプロトタイプ宣言
+        continue;
+      cur->next = fn;
       cur = cur->next;
     } else {
       global_var();
@@ -367,7 +370,7 @@ void global_var() {
   new_gvar(name, ty);
 }
 
-// function = basetype declarator "(" params? ")" "{" stmt* "}"
+// function = basetype declarator "(" params? ")" ("{" stmt* "}" | ";")
 // params = param ("," param)*
 // param = basetype declarator
 Function *function() {
@@ -384,6 +387,12 @@ Function *function() {
 
   Scope *sc = enter_scope();
   fn->params = read_func_params();
+
+  if (consume(";")) {
+    leave_scope(sc);
+    return NULL;
+  }
+
   expect("{");
 
   // stmtを連結リストで管理
