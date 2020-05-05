@@ -20,7 +20,7 @@ Type *struct_decl();
 
 Member *struct_member();
 
-Type *basetype();
+Type *basetype(bool *is_typedef);
 
 Type *declarator(Type *ty, char **name);
 
@@ -291,7 +291,7 @@ Type *type_suffix(Type *ty) {
 }
 
 VarList *read_func_param() {
-  Type *ty = basetype();
+  Type *ty = basetype(NULL);
   char *name = NULL;
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
@@ -318,15 +318,17 @@ VarList *read_func_params() {
 
 bool is_typename() {
   return peek("char") || peek("int") || peek("short") || peek("long") ||
-         peek("struct") || peek("void") || peek("_Bool") || find_typedef(token);
+         peek("struct") || peek("void") || peek("_Bool") || peek("typedef") || find_typedef(token);
 }
 
 // program() が function() かどうか判定する
 bool is_function() {
   Token *tok = token;
+
   // tokenを先読みして判定
   // basetype declarator ( ... ならfunc
-  Type *ty = basetype();
+  bool is_typedef;
+  Type *ty = basetype(&is_typedef);
   char *name = NULL;
   declarator(ty, &name);
   bool is_func = name && consume("(");
@@ -367,12 +369,17 @@ Program *program() {
 
 // global-var = basetype declarator ("[" num "]")* ";"
 void global_var() {
-  Type *ty = basetype();
+  bool is_typedef;
+  Type *ty = basetype(&is_typedef);
   char *name = NULL;
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
   expect(";");
-  new_gvar(name, ty, true);
+
+  if (is_typedef)
+    push_var_scope(name)->type_def = ty;
+  else
+    new_gvar(name, ty, true);
 }
 
 // function = basetype declarator "(" params? ")" ("{" stmt* "}" | ";")
@@ -381,7 +388,7 @@ void global_var() {
 Function *function() {
   locals = NULL;
 
-  Type *ty = basetype();
+  Type *ty = basetype(NULL);
   char *name = NULL;
   ty = declarator(ty, &name);
 
@@ -422,6 +429,7 @@ Function *function() {
 // struct-decl = "struct" ident
 //             | "struct" ident? "{" struct-member "}"
 Type *struct_decl() {
+  expect("struct");
   Token *tag = consume_ident(); // 構造体タグ
   if (tag && !peek("{")) { // 構造体タグを用いた宣言のとき
     TagScope *sc = find_tag(tag);
@@ -466,7 +474,7 @@ Type *struct_decl() {
 
 // struct-member = basetype declarator ";"
 Member *struct_member() {
-  Type *ty = basetype();
+  Type *ty = basetype(NULL);
   char *name = NULL;
   ty = declarator(ty, &name);
   expect(";");
@@ -478,27 +486,100 @@ Member *struct_member() {
 }
 
 // basetype = builtin-typename | struct-decl | typdef-name
-// builtin-typename = "int" | "short" | "long" | "char" | "void" | "_Bool"
-Type *basetype() {
-  Type *ty;
-  if (consume("char"))
-    ty = char_type;
-  else if (consume("int"))
-    ty = int_type;
-  else if (consume("short"))
-    ty = short_type;
-  else if (consume("long")) {
-    // `long long` は `long` のエイリアス
-    consume("long");
-    ty = long_type;
-  } else if (consume("struct"))
-    ty = struct_decl();
-  else if (consume("void"))
-    ty = void_type;
-  else if (consume("_Bool"))
-    ty = bool_type;
-  else
-    ty = find_var(consume_ident())->type_def;
+// builtin-typename = "int" | "short" | "long" | "long" "long" | "char" | "void" | "_Bool"
+// "typedef"はbasetypeのどこにでも現れうる
+Type *basetype(bool *is_typedef) {
+  if (!is_typename())
+    error_at(token->str, "型名ではありません");
+
+  enum {
+    VOID = 1 << 0,
+    BOOL = 1 << 2,
+    CHAR = 1 << 4,
+    SHORT = 1 << 6,
+    INT = 1 << 8,
+    LONG = 1 << 10,
+    OTHER = 1 << 12,
+  };
+
+  Type *ty = int_type;
+  int counter = 0;
+
+  // もしis_typedef(ポインタ)が宣言されていたら初期値としてfalseを代入
+  // typedefがありうるところでは事前にis_typedefを宣言する
+  //
+  // cf.)
+  // bool is_typedef;
+  // のように宣言したら初期値は0(falseになる)
+  if (is_typedef)
+    *is_typedef = false;
+
+  while (is_typename()) {
+    if (consume("typedef")) {
+      if (!is_typedef)
+        error_at(token->str, "無効な指定子です");
+      *is_typedef = true;
+      continue;
+    }
+
+    // ユーザーが定義した型を探す
+    if (!peek("void") && !peek("_Bool") && !peek("char") && !peek("short") && !peek("int") && !peek("long")) {
+      if (counter)
+        break; // ユーザーが定義した型は他の型と組み合わせることができない
+
+      if (peek("struct")) {
+        ty = struct_decl();
+      } else {
+        ty = find_typedef(token);
+        assert(ty);
+        token = token->next;
+      }
+
+      counter |= OTHER;
+      continue;
+    }
+
+    // ビルトインの型を探す
+    if (consume("char"))
+      counter += CHAR;
+    else if (consume("int"))
+      counter += INT;
+    else if (consume("short"))
+      counter += SHORT;
+    else if (consume("long"))
+      counter += LONG;
+    else if (consume("void"))
+      counter += VOID;
+    else if (consume("_Bool"))
+      counter += BOOL;
+
+    switch (counter) {
+      case VOID:
+        ty = void_type;
+        break;
+      case BOOL:
+        ty = bool_type;
+        break;
+      case CHAR:
+        ty = char_type;
+        break;
+      case SHORT:
+      case SHORT + INT:
+        ty = short_type;
+        break;
+      case INT:
+        ty = int_type;
+        break;
+      case LONG:
+      case LONG + INT:
+      case LONG + LONG:
+      case LONG + LONG + INT:
+        ty = long_type;
+        break;
+      default:
+        error_at(token->str, "無効な型です");
+    }
+  }
 
   return ty;
 }
@@ -539,7 +620,6 @@ Node *stmt(void) {
 //      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 //      | expr ";"
 //      | "{" stmt* "}"
-//      | "typedef" basetype declarator;
 //      | declaration
 Node *stmt2() {
   if (consume("return")) {
@@ -613,16 +693,6 @@ Node *stmt2() {
     return node;
   }
 
-  if (consume("typedef")) {
-    Type *ty = basetype();
-    char *name = NULL;
-    ty = declarator(ty, &name);
-    ty = type_suffix(ty);
-    expect(";");
-    push_var_scope(name)->type_def = ty;
-    return new_node_null();
-  }
-
   if (is_typename())
     return declaration();
 
@@ -634,13 +704,22 @@ Node *stmt2() {
 // declaration = basetype declarator ("=" expr) ";"
 //             | basetype declarator ";"  // 構造体タグを用いた構造体の宣言
 Node *declaration() {
-  Type *ty = basetype();
+  bool is_typedef;
+  Type *ty = basetype(&is_typedef);
+
   if (consume(";"))
     return new_node_null();
 
   char *name = NULL;
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
+
+  if (is_typedef) {
+    expect(";");
+    push_var_scope(name)->type_def = ty;
+    return new_node_null();
+  }
+
   Var *lvar = new_lvar(name, ty);
 
   if (consume(";"))
@@ -798,11 +877,12 @@ Node *postfix() {
 
 // stmt-expr = "(" "{" stmt stmt* "}" ")"
 Node *stmt_expr_tail() {
+  Scope *sc = enter_scope();
+
   Node *node = new_node_stmt_expr();
   node->body = stmt();
   Node *cur = node->body;
 
-  Scope *sc = enter_scope();
   while (!consume("}")) {
     cur->next = stmt();
     cur = cur->next;
