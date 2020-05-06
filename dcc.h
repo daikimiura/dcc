@@ -136,7 +136,7 @@ struct Node {
   Node *lhs; // 左辺
   Node *rhs; // 右辺
   Var *var; // kindがND_VARの場合、その変数
-  int val; // kindがND_NUMの場合、その値
+  long val; // kindがND_NUMの場合、その値
 
   // 制御構文
   Node *cond; // kindがND_IF/ND_WHILE/ND_FORの場合、その条件式
