@@ -24,7 +24,11 @@ Type *basetype(bool *is_typedef);
 
 Type *declarator(Type *ty, char **name);
 
+Type *abstract_declarator(Type *ty);
+
 Type *type_suffix(Type *ty);
+
+Type *type_name();
 
 Node *stmt();
 
@@ -288,6 +292,15 @@ Type *type_suffix(Type *ty) {
   expect("]");
   ty = type_suffix(ty);
   return array_of(ty, size);
+}
+
+// type-name = basetype abstract-declarator
+// ex.) int **
+//      int[3]
+Type *type_name() {
+  Type *ty = basetype(NULL);
+  ty = abstract_declarator(ty);
+  return type_suffix(ty);
 }
 
 VarList *read_func_param() {
@@ -607,6 +620,23 @@ Type *declarator(Type *ty, char **name) {
   return type_suffix(ty);
 }
 
+// abstract-declarator = "*"* ("(" abstarct-declarator ")")? type-suffix
+// 例えば、`sizeof(int **);`をparseする時に現れる
+Type *abstract_declarator(Type *ty) {
+  while (consume("*"))
+    ty = pointer_to(ty);
+
+  if (consume("(")) {
+    Type *placeholder = calloc(1, sizeof(Type));
+    Type *new_ty = abstract_declarator(placeholder);
+    expect(")");
+    memcpy(placeholder, type_suffix(ty), sizeof(Type));
+    return new_ty;
+  }
+
+  return type_suffix(ty);
+}
+
 // stmtの中身をトラバースして型をつける
 Node *stmt(void) {
   Node *node = stmt2();
@@ -899,6 +929,7 @@ Node *stmt_expr_tail() {
 
 // primary = "(" "{" stmt-expr "}" ")"
 //         | "(" expr ")"
+//         | "sizeof" "(" type-name ")"
 //         | "sizeof" unary
 //         | ident func-args?
 //         | str
@@ -915,7 +946,16 @@ Node *primary() {
     return node;
   }
 
+  tok = token;
   if (consume("sizeof")) {
+    if (consume("(")) {
+      if (is_typename()) {
+        Type *ty = type_name();
+        expect(")");
+        return new_node_num(ty->size);
+      }
+      token = tok->next;
+    }
     Node *node = unary();
     add_type(node);
     return new_node_num(node->ty->size);
