@@ -191,13 +191,35 @@ Token *read_string_literal(Token *cur, char *start) {
       buf[len++] = *p++;
     }
   }
+  p++;
 
   // 例えば "abc"; のような入力文字列があった時、startは最初の'"'でpは';'になる
-  Token *tok = new_token(TK_STR, cur, start, p - start + 1);
+  Token *tok = new_token(TK_STR, cur, start, p - start);
   tok->contents = malloc(len + 1);
   memcpy(tok->contents, buf, len);
   tok->contents[len] = '\0';
   tok->cont_len = len + 1;
+  return tok;
+}
+
+Token *read_char_literal(Token *cur, char *start) {
+  char *p = start + 1;
+
+  char c;
+  if (*p == '\\') {
+    p++;
+    c = get_escape_char(*p++);
+  } else {
+    c = *p++;
+  }
+
+  if (*p != '\'')
+    error_at(start, "文字型が長すぎます");
+  p++;
+
+  // 例えば 'a'; のような入力文字列があった時、startは最初の'\''でpは';'になる
+  Token *tok = new_token(TK_NUM, cur, start, p - start);
+  tok->val = c;
   return tok;
 }
 
@@ -330,6 +352,12 @@ Token *tokenize(char *p) {
       while (is_alnum(*p))
         p++;
       cur = new_token(TK_IDENT, cur, q, p - q);
+      continue;
+    }
+
+    if (*p == '\'') {
+      cur = read_char_literal(cur, p);
+      p += cur->len;
       continue;
     }
 

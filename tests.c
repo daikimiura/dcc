@@ -944,6 +944,9 @@ int main() {
     *(int *) y;
   }), "int x=5; long y=(long)&x; *(int*)y");
 
+  assert(97, 'a', "'a'");
+  assert(10, '\n', "\'\\n\'");
+
   printf("OK\n");
   return 0;
 }
