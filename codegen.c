@@ -115,6 +115,28 @@ void store(Type *ty) {
   printf("  push rdi\n");
 }
 
+// RAXの値を引数のTypeにキャストする
+void truncate(Type *ty) {
+  printf("  pop rax\n");
+
+  if (ty->kind == TY_BOOL) {
+    printf("  cmp rax, 0\n");
+    // RAXの値が0以外だったら1、0だったら0
+    // ALはRAXの下位8bit
+    printf("  setne al\n");
+  }
+
+  // 符号拡張する
+  if (ty->size == 1)
+    printf("  movsx rax, al\n");
+  else if (ty->size == 2)
+    printf("  movsx rax, ax\n");
+  else if (ty->size == 4)
+    printf("  movsxd rax, eax\n");
+
+  printf("  push rax\n");
+}
+
 void gen(Node *node) {
   switch (node->kind) {
     case ND_NULL:
@@ -248,6 +270,10 @@ void gen(Node *node) {
       gen(node->lhs);
       if (node->ty->kind != TY_ARRAY)
         load(node->ty);
+      return;
+    case ND_CAST:
+      gen(node->lhs);
+      truncate(node->ty);
       return;
     default:;
   }

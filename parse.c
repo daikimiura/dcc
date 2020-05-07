@@ -46,6 +46,8 @@ Node *add();
 
 Node *mul();
 
+Node *cast();
+
 Node *unary();
 
 Node *postfix();
@@ -823,33 +825,53 @@ Node *add() {
   }
 }
 
-// mul = unary ("*" unary | "/" unary)*
+// mul = cast ("*" cast | "/" cast)*
 Node *mul() {
-  Node *node = unary();
+  Node *node = cast();
 
   for (;;) {
     if (consume("*"))
-      node = new_node(ND_MUL, node, unary());
+      node = new_node(ND_MUL, node, cast());
     else if (consume("/"))
-      node = new_node(ND_DIV, node, unary());
+      node = new_node(ND_DIV, node, cast());
     else
       return node;
   }
 }
 
-// unary = ("+" | "-")? primary
-//       | ("*" | "&") unary
+// "(" type-name ")" cast | unary
+Node *cast() {
+  Token *tok = token;
+  if (consume("(")) {
+    if (is_typename()) {
+      Type *ty = type_name();
+      expect(")");
+      Node *node = new_node_unary(ND_CAST, cast());
+      add_type(node->lhs);
+      node->ty = ty;
+      return node;
+    }
+
+    // 型キャストの`(`じゃなかったらtokenを元に戻す
+    // ex) 2 * ( 4 - 1 )
+    token = tok;
+  }
+
+  return unary();
+}
+
+// unary = ("+" | "-" | "*" | "&")? cast
 //       | postfix
 Node *unary() {
   Token *t;
   if (consume("+"))
-    return primary();
+    return cast();
   if (consume("-"))
-    return new_node(ND_SUB, new_node_num(0), primary());
+    return new_node(ND_SUB, new_node_num(0), cast());
   if (consume("*"))
-    return new_node_unary(ND_DEREF, unary());
+    return new_node_unary(ND_DEREF, cast());
   if (consume("&"))
-    return new_node_unary(ND_ADDR, unary());
+    return new_node_unary(ND_ADDR, cast());
   return postfix();
 }
 

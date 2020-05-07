@@ -124,6 +124,7 @@ typedef enum {
   ND_FUNCALL, // 関数呼び出し
   ND_EXPR_STMT, // Expression statement (式文)
   ND_STMT_EXPR, // GNU Statement expression
+  ND_CAST, // 型キャスト
   ND_NULL,
 } NodeKind;
 
