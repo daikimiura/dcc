@@ -195,6 +195,7 @@ typedef enum {
   TY_ARRAY,
   TY_STRUCT,
   TY_FUNC,
+  TY_ENUM,
 } TypeKind;
 
 struct Type {
@@ -220,16 +221,18 @@ struct Member {
 // ブロックスコープ
 //
 
-// ローカル変数/グローバル変数/typedef のスコープ
+// ローカル変数/グローバル変数/typedef/enum のスコープ
 typedef struct VarScope VarScope;
 struct VarScope {
   VarScope *next;
   char *name;
   Var *var;
   Type *type_def; // typedefのとき、型の実体
+  Type *enum_ty; // enumの時、その型
+  int enum_val; // enumの時、その値
 };
 
-// 構造体タグのスコープ
+// 構造体タグ/eunmタグ のスコープ
 typedef struct TagScope TagScope;
 struct TagScope {
   TagScope *next;
@@ -238,8 +241,8 @@ struct TagScope {
 };
 
 typedef struct {
-  VarScope *var_scope; // 変数のスコープ
-  TagScope *tag_scope; // 構造体タグのスコープ
+  VarScope *var_scope; // ローカル変数/グローバル変数/typedef/enum のスコープ
+  TagScope *tag_scope; // 構造体タグ/enumタグ のスコープ
 } Scope;
 
 bool is_integer(Type *ty);
@@ -250,6 +253,8 @@ Type *pointer_to(Type *ptr_to);
 
 Type *func_type(Type *return_ty);
 
+Type *enum_type();
+
 void add_type(Node *node);
 
 Type *char_type;
@@ -258,7 +263,6 @@ Type *short_type;
 Type *long_type;
 Type *void_type;
 Type *bool_type;
-
 
 Type *array_of(Type *pointer_to, int size);
 

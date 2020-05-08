@@ -43,6 +43,10 @@ Type *func_type(Type *return_ty) {
   return ty;
 }
 
+Type *enum_type() {
+  return new_type(TY_ENUM, 4, 4);
+}
+
 // n以上の整数のうち、alignで割り切れる最小の整数を返す
 // alignは2の冪乗
 // align_to(33, 8) => 40

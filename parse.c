@@ -20,6 +20,8 @@ Type *struct_decl();
 
 Member *struct_member();
 
+Type *enum_specifier();
+
 Type *basetype(bool *is_typedef);
 
 Type *declarator(Type *ty, char **name);
@@ -221,7 +223,7 @@ Type *find_typedef(Token *tok) {
   return NULL;
 }
 
-// 構造体タグを名前で検索する
+// 構造体/enumタグを名前で検索する
 // 見つからなかった場合はNULLを返す
 TagScope *find_tag(Token *tok) {
   for (TagScope *sc = tag_scope; sc; sc = sc->next)
@@ -230,7 +232,7 @@ TagScope *find_tag(Token *tok) {
   return NULL;
 }
 
-// var_scopeの先頭に変数/typedefを追加
+// var_scopeの先頭に変数/typedef/enumを追加
 VarScope *push_var_scope(char *name) {
   VarScope *sc = calloc(1, sizeof(VarScope));
   sc->name = name;
@@ -276,7 +278,7 @@ Var *new_gvar(char *name, Type *ty, bool emit) {
   return gvar;
 }
 
-//  新しい構造体タグを連結リスト(tag_scope)の先頭に追加する
+//  新しい構造体タグ/enumタグを連結リスト(tag_scope)の先頭に追加する
 void push_tag_scope(Token *tag, Type *ty) {
   TagScope *sc = calloc(1, sizeof(TagScope));
   sc->next = tag_scope;
@@ -332,7 +334,7 @@ VarList *read_func_params() {
 }
 
 bool is_typename() {
-  return peek("char") || peek("int") || peek("short") || peek("long") ||
+  return peek("char") || peek("int") || peek("short") || peek("long") || peek("enum") ||
          peek("struct") || peek("void") || peek("_Bool") || peek("typedef") || find_typedef(token);
 }
 
@@ -500,7 +502,59 @@ Member *struct_member() {
   return mem;
 }
 
-// basetype = builtin-typename | struct-decl | typdef-name
+// リストの最後ならtrue、そうでないならfalseを返す
+// ケツカンマありの場合にも対応
+static bool consume_end(void) {
+  Token *tok = token;
+  if (consume("}") || (consume(",") && consume("}")))
+    return true;
+  token = tok;
+  return false;
+}
+
+// enum-specifier = "enum" ident
+//                | "enum" ident? "{" enum-list? "}"
+// enum-list = ident ("=" num)? ("," ident ("=" num)?)* ","?
+Type *enum_specifier() {
+  expect("enum");
+  Type *ty = enum_type();
+
+  Token *tag = consume_ident();
+
+  // すでに宣言済みのenumを指定する場合
+  if (tag && !peek("{")) {
+    TagScope *sc = find_tag(tag);
+    if (!sc)
+      error_at(tag->str, "enumが宣言されていません");
+    if (sc->ty->kind != TY_ENUM)
+      error_at(tag->str, "enumではありません");
+    return sc->ty;
+  }
+
+  // 新しいenumを宣言する場合
+  expect("{");
+  int cnt = 0;
+  for (;;) {
+    char *name = expect_ident();
+    if (consume("="))
+      cnt = expect_number();
+
+    VarScope *sc = push_var_scope(name);
+    sc->enum_ty = ty;
+    sc->enum_val = cnt++;
+
+    if (consume_end())
+      break;
+    expect(",");
+  }
+
+  if (tag) {
+    push_tag_scope(tag, ty);
+  }
+  return ty;
+}
+
+// basetype = builtin-typename | struct-decl | typdef-name | enum-specifier
 // builtin-typename = "int" | "short" | "long" | "long" "long" | "char" | "void" | "_Bool"
 // "typedef"はbasetypeのどこにでも現れうる
 Type *basetype(bool *is_typedef) {
@@ -544,6 +598,8 @@ Type *basetype(bool *is_typedef) {
 
       if (peek("struct")) {
         ty = struct_decl();
+      } else if (peek("enum")) {
+        ty = enum_specifier();
       } else {
         ty = find_typedef(token);
         assert(ty);
@@ -595,7 +651,6 @@ Type *basetype(bool *is_typedef) {
         error_at(token->str, "無効な型です");
     }
   }
-
   return ty;
 }
 
@@ -1001,8 +1056,12 @@ Node *primary() {
     }
 
     VarScope *sc = find_var(tok);
-    if (sc && sc->var)
-      return new_node_var(sc->var);
+    if (sc) {
+      if (sc->var)
+        return new_node_var(sc->var);
+      if (sc->enum_ty)
+        return new_node_num(sc->enum_val);
+    }
     error_at(tok->str, "変数が定義されていません");
   }
 
