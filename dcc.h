@@ -114,6 +114,10 @@ typedef enum {
   ND_COMMA, // ,
   ND_ADDR, // &
   ND_DEREF, // *
+  ND_PRE_INC, // ++ (前置)
+  ND_PRE_DEC, // -- (前置)
+  ND_POST_INC, // ++ (後置)
+  ND_POST_DEC, // -- (後置)
   ND_MEMBER, // . (構造体のメンバへのアクセス)
   ND_VAR, // ローカル変数 or グローバル変数
   ND_NUM, // 整数

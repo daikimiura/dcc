@@ -137,6 +137,21 @@ void truncate(Type *ty) {
   printf("  push rax\n");
 }
 
+// スタックトップの値をpopしてインクリメントしてスタックにpushする
+void inc(Type *ty) {
+  printf("  pop rax\n");
+  printf("  add rax, %d\n", ty->ptr_to ? ty->ptr_to->size : 1);
+  printf("  push rax\n");
+}
+
+// スタックトップの値をpopしてデクリメントしてスタックにpushする
+void dec(Type *ty) {
+  printf("  pop rax\n");
+  printf("  sub rax, %d\n", ty->ptr_to ? ty->ptr_to->size : 1);
+  printf("  push rax\n");
+}
+
+
 void gen(Node *node) {
   switch (node->kind) {
     case ND_NULL:
@@ -278,6 +293,44 @@ void gen(Node *node) {
     case ND_COMMA:
       gen(node->lhs);
       gen(node->rhs);
+      return;
+    case ND_PRE_INC:
+      gen_addr(node->lhs);
+      // storeする時にスタックが
+      // -------<上位アドレス>------
+      // [アドレス]
+      // [storeする値]
+      // -------<下位アドレス>-------
+      // のようになってないといけないのでrspのアドレスをpushしておく
+      printf("  push [rsp]\n");
+      load(node->ty);
+      inc(node->ty);
+      store(node->ty);
+      return;
+    case ND_PRE_DEC:
+      gen_addr(node->lhs);
+      printf("  push [rsp]\n");
+      load(node->ty);
+      dec(node->ty);
+      store(node->ty);
+      return;
+    case ND_POST_INC:
+      gen_addr(node->lhs);
+      printf("  push [rsp]\n");
+      load(node->ty);
+      inc(node->ty);
+      // インクリメントした値をstoreするが、スタックのトップにはインクリメントする前の値(インクリメントしてからデクリメントした値)を残す
+      store(node->ty);
+      dec(node->ty);
+      return;
+    case ND_POST_DEC:
+      gen_addr(node->lhs);
+      printf("  push [rsp]\n");
+      load(node->ty);
+      dec(node->ty);
+      // デクリメントした値をstoreするが、スタックのトップにはデクリメントする前の値(デクリメントしてからインクリメントした値)を残す
+      store(node->ty);
+      inc(node->ty);
       return;
     default:;
   }

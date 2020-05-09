@@ -951,9 +951,14 @@ Node *cast() {
 }
 
 // unary = ("+" | "-" | "*" | "&")? cast
+//       | ("++" | "--") unary
 //       | postfix
 Node *unary() {
   Token *t;
+  if (consume("++"))
+    return new_node_unary(ND_PRE_INC, unary());
+  if (consume("--"))
+    return new_node_unary(ND_PRE_DEC, unary());
   if (consume("+"))
     return cast();
   if (consume("-"))
@@ -988,7 +993,7 @@ Node *struct_ref(Node *lhs) {
   return node;
 }
 
-// postfix = primary ("[" expr "]" | "." ident | "->" ident)*
+// postfix = primary ("[" expr "]" | "." ident | "->" ident | "++" | "--")*
 Node *postfix() {
   Node *node = primary();
 
@@ -1010,6 +1015,16 @@ Node *postfix() {
       // x->y は (*x).y の糖衣構文
       node = new_node_unary(ND_DEREF, node);
       node = struct_ref(node);
+      continue;
+    }
+
+    if (consume("++")) {
+      node = new_node_unary(ND_POST_INC, node);
+      continue;
+    }
+
+    if (consume("--")) {
+      node = new_node_unary(ND_POST_DEC, node);
       continue;
     }
 

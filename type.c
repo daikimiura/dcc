@@ -92,6 +92,10 @@ void add_type(Node *node) {
     case ND_PTR_SUB: // ptr - num
     case ND_PTR_DIFF: // ptr - ptr
     case ND_ASSIGN: // =
+    case ND_PRE_INC: // ++ (前置)
+    case ND_PRE_DEC: // -- (前置)
+    case ND_POST_INC: // ++ (後置)
+    case ND_POST_DEC: // -- (後置)
       node->ty = node->lhs->ty;
       return;
     case ND_VAR: // 変数
