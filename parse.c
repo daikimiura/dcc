@@ -173,6 +173,14 @@ Node *new_node_stmt_expr() {
   return node;
 }
 
+Node *new_node_comma(Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_COMMA;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
 // .dataセクションのラベルを作成する
 // 文字列をグローバル変数として扱うために、普通のグローバル変数とは名前が被らない一意なラベルを用いる
 char *new_label() {
@@ -839,9 +847,17 @@ Node *declaration() {
   return new_node_unary(ND_EXPR_STMT, node);
 }
 
-// expr = assign
+// expr = assign ("," assign)*
+// コンマ演算子: https://ja.wikipedia.org/wiki/%E3%82%B3%E3%83%B3%E3%83%9E%E6%BC%94%E7%AE%97%E5%AD%90
 Node *expr() {
-  return assign();
+  Node *node = assign();
+
+  while (consume(",")) {
+    node = new_node_unary(ND_EXPR_STMT, node);
+    node = new_node_comma(node, assign());
+  }
+
+  return node;
 }
 
 // assign = equality ("=" assign)?

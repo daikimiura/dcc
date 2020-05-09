@@ -112,6 +112,9 @@ void add_type(Node *node) {
         error("invalid pointer dereference");
       node->ty = node->lhs->ty->ptr_to;
       return;
+    case ND_COMMA:
+      node->ty = node->rhs->ty;
+      return;
     case ND_STMT_EXPR: {
       Node *last = node->body;
       while (last->next)

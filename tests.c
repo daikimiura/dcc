@@ -1099,6 +1099,15 @@ int main() {
     i;
   }), "int i=3; int j=0; for (int i=0; i<=10; i=i+1) j=j+i; i;");
 
+  assert(3, (1, 2, 3), "(1,2,3)");
+  assert(2, ({
+    int a;
+    int b;
+    int c;
+    a = 1, b = 2, c = 3;
+    b;
+  }), "int a, b, c; c = 3;");
+
   printf("OK\n");
   return 0;
 }

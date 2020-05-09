@@ -275,6 +275,10 @@ void gen(Node *node) {
       gen(node->lhs);
       truncate(node->ty);
       return;
+    case ND_COMMA:
+      gen(node->lhs);
+      gen(node->rhs);
+      return;
     default:;
   }
 
