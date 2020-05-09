@@ -384,7 +384,8 @@ void emit_text(Program *prog) {
 
   for (Function *fn = prog->fns; fn; fn = fn->next) {
     funcname = fn->name;
-    printf(".global _%s\n", funcname);
+    if (!fn->is_static)
+      printf(".global _%s\n", funcname);
     printf("_%s:\n", funcname);
 
     // プロローグ

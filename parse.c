@@ -9,6 +9,11 @@ static VarList *globals;
 static VarScope *var_scope;
 static TagScope *tag_scope;
 
+typedef enum {
+  TYPEDEF = 1 << 0,
+  STATIC = 1 << 1,
+} StorageClass;
+
 // 非終端記号を表す関数のプロトタイプ宣言
 Program *program();
 
@@ -22,7 +27,7 @@ Member *struct_member();
 
 Type *enum_specifier();
 
-Type *basetype(bool *is_typedef);
+Type *basetype(StorageClass *sclass);
 
 Type *declarator(Type *ty, char **name);
 
@@ -334,7 +339,7 @@ VarList *read_func_params() {
 }
 
 bool is_typename() {
-  return peek("char") || peek("int") || peek("short") || peek("long") || peek("enum") ||
+  return peek("char") || peek("int") || peek("short") || peek("long") || peek("enum") || peek("static") ||
          peek("struct") || peek("void") || peek("_Bool") || peek("typedef") || find_typedef(token);
 }
 
@@ -344,8 +349,8 @@ bool is_function() {
 
   // tokenを先読みして判定
   // basetype declarator ( ... ならfunc
-  bool is_typedef;
-  Type *ty = basetype(&is_typedef);
+  StorageClass sclass;
+  Type *ty = basetype(&sclass);
   char *name = NULL;
   declarator(ty, &name);
   bool is_func = name && consume("(");
@@ -386,14 +391,14 @@ Program *program() {
 
 // global-var = basetype declarator ("[" num "]")* ";"
 void global_var() {
-  bool is_typedef;
-  Type *ty = basetype(&is_typedef);
+  StorageClass sclass;
+  Type *ty = basetype(&sclass);
   char *name = NULL;
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
   expect(";");
 
-  if (is_typedef)
+  if (sclass == TYPEDEF)
     push_var_scope(name)->type_def = ty;
   else
     new_gvar(name, ty, true);
@@ -405,7 +410,8 @@ void global_var() {
 Function *function() {
   locals = NULL;
 
-  Type *ty = basetype(NULL);
+  StorageClass sclass;
+  Type *ty = basetype(&sclass);
   char *name = NULL;
   ty = declarator(ty, &name);
 
@@ -414,6 +420,7 @@ Function *function() {
 
   Function *fn = calloc(1, sizeof(Function));
   fn->name = name;
+  fn->is_static = (sclass == STATIC);
 
   expect("(");
 
@@ -556,8 +563,8 @@ Type *enum_specifier() {
 
 // basetype = builtin-typename | struct-decl | typdef-name | enum-specifier
 // builtin-typename = "int" | "short" | "long" | "long" "long" | "char" | "void" | "_Bool"
-// "typedef"はbasetypeのどこにでも現れうる
-Type *basetype(bool *is_typedef) {
+// "typedef" / "static" (ストレージクラス指定子)はbasetypeのどこにでも現れうる
+Type *basetype(StorageClass *sclass) {
   if (!is_typename())
     error_at(token->str, "型名ではありません");
 
@@ -574,20 +581,23 @@ Type *basetype(bool *is_typedef) {
   Type *ty = int_type;
   int counter = 0;
 
-  // もしis_typedef(ポインタ)が宣言されていたら初期値としてfalseを代入
-  // typedefがありうるところでは事前にis_typedefを宣言する
-  //
-  // cf.)
-  // bool is_typedef;
-  // のように宣言したら初期値は0(falseになる)
-  if (is_typedef)
-    *is_typedef = false;
+  // もしsclass(ポインタ)が宣言されていたら初期値として0を代入
+  // ストレージクラスがありうるところでは事前にsclassを宣言する
+  if (sclass)
+    *sclass = 0;
 
   while (is_typename()) {
-    if (consume("typedef")) {
-      if (!is_typedef)
-        error_at(token->str, "無効な指定子です");
-      *is_typedef = true;
+    if (peek("typedef") || peek("static")) {
+      if (!sclass)
+        error_at(token->str, "ストレージクラス指定子はここでは使えません");
+
+      if (consume("typedef"))
+        *sclass |= TYPEDEF;
+      else if (consume("static"))
+        *sclass |= STATIC;
+
+      if (*sclass == (TYPEDEF | STATIC))
+        error_at(token->str, "typedefとstaticは一緒に使えません");
       continue;
     }
 
@@ -651,7 +661,9 @@ Type *basetype(bool *is_typedef) {
         error_at(token->str, "無効な型です");
     }
   }
-  return ty;
+
+  return
+      ty;
 }
 
 // declarator = "*"* ("(" declarator ")" | ident) type-suffix
@@ -791,8 +803,8 @@ Node *stmt2() {
 // declaration = basetype declarator ("=" expr) ";"
 //             | basetype declarator ";"  // 構造体タグを用いた構造体の宣言
 Node *declaration() {
-  bool is_typedef;
-  Type *ty = basetype(&is_typedef);
+  StorageClass sclass;
+  Type *ty = basetype(&sclass);
 
   if (consume(";"))
     return new_node_null();
@@ -801,7 +813,7 @@ Node *declaration() {
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
 
-  if (is_typedef) {
+  if (sclass == TYPEDEF) {
     expect(";");
     push_var_scope(name)->type_def = ty;
     return new_node_null();

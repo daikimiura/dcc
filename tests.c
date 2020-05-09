@@ -65,6 +65,8 @@ int fib(int x) {
   return fib(x - 1) + fib(x - 2);
 }
 
+static int static_fn() { return 3; }
+
 int main() {
   assert(0, 0, "0");
   assert(42, 42, "42");
@@ -1082,6 +1084,8 @@ int main() {
     enum t y;
     sizeof(y);
   }), "enum t { zero, one, two }; enum t y; sizeof(y);");
+
+  assert(3, static_fn(), "static_fn()");
 
   printf("OK\n");
   return 0;

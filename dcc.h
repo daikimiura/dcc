@@ -165,6 +165,7 @@ struct Function {
   VarList *locals; // ローカル変数
   VarList *params; // 引数
   int stack_size; // 引数の個数 * 8 (関数呼び出し時にに下げるスタックの大きさ)
+  bool is_static; // staticかどうか
 };
 
 typedef struct {
