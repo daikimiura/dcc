@@ -151,6 +151,74 @@ void dec(Type *ty) {
   printf("  push rax\n");
 }
 
+void gen_binary(Node *node) {
+  printf("  pop rdi\n"); // rhs
+  printf("  pop rax\n"); // lhs
+
+  switch (node->kind) {
+    case ND_ADD:
+    case ND_ADD_EQ:
+      printf("  add rax, rdi\n");
+      break;
+    case ND_PTR_ADD:
+    case ND_PTR_ADD_EQ:
+      printf("  imul rdi, %d\n", node->ty->ptr_to->size);
+      printf("  add rax, rdi\n"); // raxに入ってるのはアドレス
+      break;
+    case ND_SUB:
+    case ND_SUB_EQ:
+      printf("  sub rax, rdi\n");
+      break;
+    case ND_PTR_SUB:
+    case ND_PTR_SUB_EQ:
+      printf("  imul rdi, %d\n", node->ty->ptr_to->size);
+      printf("  sub rax, rdi\n");
+      break;
+    case ND_PTR_DIFF:
+      printf("  sub rax, rdi\n");
+      printf("  cqo\n");
+      printf("  mov rdi, %d\n", node->ty->ptr_to->size);
+      printf(
+          "  idiv rdi\n"); // idivは暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、それを引数のレジスタの64ビットの値で割り、商をRAXに、余りをRDXにセットする
+      break;
+    case ND_MUL:
+    case ND_MUL_EQ:
+      printf("  imul rax, rdi\n");
+      break;
+    case ND_DIV:
+    case ND_DIV_EQ:
+      // cqo: RAXに入っている64ビットの値を128ビットに伸ばしてRDXとRAXにセットする
+      printf("  cqo\n");
+      // idiv: 暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、それを引数のレジスタの64ビットの値で割り
+      //       商をRAXに、余りをRDXにセットする
+      printf("  idiv rdi\n");
+      break;
+    case ND_EQ:
+      printf("  cmp rax, rdi\n");
+      printf("  sete al\n");
+      printf("  movzx rax, al\n");
+      break;
+    case ND_NE:
+      printf("  cmp rax, rdi\n");
+      printf("  setne al\n");
+      printf("  movzx rax, al\n");
+      break;
+    case ND_LT:
+      printf("  cmp rax, rdi\n");
+      printf("  setl al\n");
+      printf("  movzx rax, al\n");
+      break;
+    case ND_LE:
+      printf("  cmp rax, rdi\n");
+      printf("  setle al\n");
+      printf("  movzx rax, al\n");
+      break;
+    default:
+      break;
+  }
+
+  printf("  push rax\n");
+}
 
 void gen(Node *node) {
   switch (node->kind) {
@@ -290,6 +358,19 @@ void gen(Node *node) {
       gen(node->lhs);
       truncate(node->ty);
       return;
+    case ND_ADD_EQ:
+    case ND_PTR_ADD_EQ:
+    case ND_SUB_EQ:
+    case ND_PTR_SUB_EQ:
+    case ND_MUL_EQ:
+    case ND_DIV_EQ:
+      gen_addr(node->lhs);
+      printf("  push [rsp]\n");
+      load(node->lhs->ty);
+      gen(node->rhs);
+      gen_binary(node);
+      store(node->ty);
+      return;
     case ND_COMMA:
       gen(node->lhs);
       gen(node->rhs);
@@ -301,7 +382,7 @@ void gen(Node *node) {
       // [アドレス]
       // [storeする値]
       // -------<下位アドレス>-------
-      // のようになってないといけないのでrspのアドレスをpushしておく
+      // のようになってないといけないのでrspのアドレスをpushする
       printf("  push [rsp]\n");
       load(node->ty);
       inc(node->ty);
@@ -335,70 +416,10 @@ void gen(Node *node) {
     default:;
   }
 
+
   gen(node->lhs);
   gen(node->rhs);
-
-  printf("  pop rdi\n"); // rhs
-  printf("  pop rax\n"); // lhs
-
-  switch (node->kind) {
-    case ND_ADD:
-      printf("  add rax, rdi\n");
-      break;
-    case ND_PTR_ADD:
-      printf("  imul rdi, %d\n", node->ty->ptr_to->size);
-      printf("  add rax, rdi\n"); // raxに入ってるのはアドレス
-      break;
-    case ND_SUB:
-      printf("  sub rax, rdi\n");
-      break;
-    case ND_PTR_SUB:
-      printf("  imul rdi, %d\n", node->ty->ptr_to->size);
-      printf("  sub rax, rdi\n");
-      break;
-    case ND_PTR_DIFF:
-      printf("  sub rax, rdi\n");
-      printf("  cqo\n");
-      printf("  mov rdi, %d\n", node->ty->ptr_to->size);
-      printf(
-          "  idiv rdi\n"); // idivは暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、それを引数のレジスタの64ビットの値で割り、商をRAXに、余りをRDXにセットする
-      break;
-    case ND_MUL:
-      printf("  imul rax, rdi\n");
-      break;
-    case ND_DIV:
-      // cqo: RAXに入っている64ビットの値を128ビットに伸ばしてRDXとRAXにセットする
-      printf("  cqo\n");
-      // idiv: 暗黙のうちにRDXとRAXを取って、それを合わせたものを128ビット整数とみなして、それを引数のレジスタの64ビットの値で割り
-      //       商をRAXに、余りをRDXにセットする
-      printf("  idiv rdi\n");
-      break;
-    case ND_EQ:
-      printf("  cmp rax, rdi\n");
-      printf("  sete al\n");
-      printf("  movzx rax, al\n");
-      break;
-    case ND_NE:
-      printf("  cmp rax, rdi\n");
-      printf("  setne al\n");
-      printf("  movzx rax, al\n");
-      break;
-    case ND_LT:
-      printf("  cmp rax, rdi\n");
-      printf("  setl al\n");
-      printf("  movzx rax, al\n");
-      break;
-    case ND_LE:
-      printf("  cmp rax, rdi\n");
-      printf("  setle al\n");
-      printf("  movzx rax, al\n");
-      break;
-    default:
-      error("パーズエラー");
-      break;
-  }
-
-  printf("  push rax\n");
+  gen_binary(node);
 }
 
 // データ(.data)セクションの内容を出力する

@@ -96,6 +96,12 @@ void add_type(Node *node) {
     case ND_PRE_DEC: // -- (前置)
     case ND_POST_INC: // ++ (後置)
     case ND_POST_DEC: // -- (後置)
+    case ND_ADD_EQ:
+    case ND_PTR_ADD_EQ:
+    case ND_SUB_EQ:
+    case ND_PTR_SUB_EQ:
+    case ND_MUL_EQ:
+    case ND_DIV_EQ:
       node->ty = node->lhs->ty;
       return;
     case ND_VAR: // 変数

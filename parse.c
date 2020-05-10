@@ -860,12 +860,36 @@ Node *expr() {
   return node;
 }
 
-// assign = equality ("=" assign)?
+// assign = equality (assign-op assign)?
+// assign-op = "=" | "+=" | "-=" | "*=" | "/="
 Node *assign() {
   Node *node = equality();
 
   if (consume("="))
-    node = new_node(ND_ASSIGN, node, assign());
+    return new_node(ND_ASSIGN, node, assign());
+
+  if (consume("*="))
+    return new_node(ND_MUL_EQ, node, assign());
+
+  if (consume("/="))
+    return new_node(ND_DIV_EQ, node, assign());
+
+  if (consume("+=")) {
+    add_type(node);
+    if (node->ty->ptr_to)
+      return new_node(ND_PTR_ADD_EQ, node, assign());
+    else
+      return new_node(ND_ADD_EQ, node, assign());
+  }
+
+  if (consume("-=")) {
+    add_type(node);
+    if (node->ty->ptr_to)
+      return new_node(ND_PTR_SUB_EQ, node, assign());
+    else
+      return new_node(ND_SUB_EQ, node, assign());
+  }
+
   return node;
 }
 
