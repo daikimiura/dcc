@@ -45,6 +45,12 @@ Node *expr();
 
 Node *assign();
 
+Node *bitor();
+
+Node *bitxor();
+
+Node *bitand();
+
 Node *equality();
 
 Node *relational();
@@ -176,6 +182,30 @@ Node *new_node_stmt_expr() {
 Node *new_node_comma(Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_COMMA;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node_bitor(Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_BITOR;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node_bitxor(Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_BITXOR;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node_bitand(Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_BITAND;
   node->lhs = lhs;
   node->rhs = rhs;
   return node;
@@ -860,10 +890,10 @@ Node *expr() {
   return node;
 }
 
-// assign = equality (assign-op assign)?
+// assign = bitor (assign-op assign)?
 // assign-op = "=" | "+=" | "-=" | "*=" | "/="
 Node *assign() {
-  Node *node = equality();
+  Node *node = bitor();
 
   if (consume("="))
     return new_node(ND_ASSIGN, node, assign());
@@ -889,6 +919,33 @@ Node *assign() {
     else
       return new_node(ND_SUB_EQ, node, assign());
   }
+
+  return node;
+}
+
+// bitor = bitxor ("|" bitxor)*
+Node *bitor() {
+  Node *node = bitxor();
+  while (consume("|"))
+    node = new_node_bitor(node, bitxor());
+
+  return node;
+}
+
+// bitxor = bitand ("^" bitand)*
+Node *bitxor() {
+  Node *node = bitand();
+  while (consume("^"))
+    node = new_node_bitxor(node, bitxor());
+
+  return node;
+}
+
+// bitand = equality ("&" equality)*
+Node *bitand() {
+  Node *node = equality();
+  while (consume("&"))
+    node = new_node_bitand(node, equality());
 
   return node;
 }
