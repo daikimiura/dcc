@@ -202,6 +202,29 @@ Token *read_string_literal(Token *cur, char *start) {
   return tok;
 }
 
+Token *read_int_literal(Token *cur, char *start) {
+  char *p = start;
+  int base;
+
+  if (!strncasecmp(p, "0x", 2) && is_alnum(p[2])) { // 16進数のintリテラル
+    p += 2;
+    base = 16;
+  } else if (!strncasecmp(p, "0b", 2) && is_alnum((p[2]))) { // 2進数のintリテラル
+    p += 2;
+    base = 2;
+  } else if (*p == '0') { // 8進数のintリテラル
+    base = 8;
+  } else {
+    base = 10;
+  }
+
+  long val = strtol(p, &p, base);
+  Token *tok = new_token(TK_NUM, cur, start, p - start);
+  tok->val = val;
+
+  return tok;
+}
+
 Token *read_char_literal(Token *cur, char *start) {
   char *p = start + 1;
 
@@ -393,11 +416,8 @@ Token *tokenize(char *p) {
     }
 
     if (isdigit(*p)) {
-      // 一旦lenが0のトークンを作成して後からlenを更新
-      cur = new_token(TK_NUM, cur, p, 0);
-      char *q = p;
-      cur->val = strtol(p, &p, 10);
-      cur->len = p - q;
+      cur = read_int_literal(cur, p);
+      p += cur->len;
       continue;
     }
 
