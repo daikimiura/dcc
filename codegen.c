@@ -413,6 +413,15 @@ void gen(Node *node) {
       store(node->ty);
       inc(node->ty);
       return;
+    case ND_NOT:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      // RAXの値が0だったら1、0以外だったら0に更新
+      printf("  cmp rax, 0\n");
+      printf("  sete al\n");
+      printf("  movsx rax, al\n");
+      printf("  push rax\n");
+      return;
     default:;
   }
 

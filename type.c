@@ -86,6 +86,7 @@ void add_type(Node *node) {
     case ND_LE: // <=
     case ND_FUNCALL: // 関数呼び出し
     case ND_NUM: // 整数
+    case ND_NOT: // !
       node->ty = int_type;
       return;
     case ND_PTR_ADD: // ptr + num, num + ptr
