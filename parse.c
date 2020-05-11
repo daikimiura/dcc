@@ -974,7 +974,7 @@ Node *cast() {
   return unary();
 }
 
-// unary = ("+" | "-" | "*" | "&" | "!")? cast
+// unary = ("+" | "-" | "*" | "&" | "!" | "~")? cast
 //       | ("++" | "--") unary
 //       | postfix
 Node *unary() {
@@ -993,6 +993,8 @@ Node *unary() {
     return new_node_unary(ND_ADDR, cast());
   if (consume("!"))
     return new_node_unary(ND_NOT, cast());
+  if (consume("~"))
+    return new_node_unary(ND_BIT_NOT, cast());
   return postfix();
 }
 

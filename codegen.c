@@ -422,6 +422,12 @@ void gen(Node *node) {
       printf("  movsx rax, al\n");
       printf("  push rax\n");
       return;
+    case ND_BIT_NOT:
+      gen(node->lhs);
+      printf("  pop rax\n");
+      printf("  not rax\n");
+      printf("  push rax\n");
+      return;
     default:;
   }
 

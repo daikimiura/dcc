@@ -122,6 +122,7 @@ typedef enum {
   ND_ADDR, // &
   ND_DEREF, // *
   ND_NOT, // !
+  ND_BIT_NOT, // ~
   ND_PRE_INC, // ++ (前置)
   ND_PRE_DEC, // -- (前置)
   ND_POST_INC, // ++ (後置)
