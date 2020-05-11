@@ -437,6 +437,46 @@ void gen(Node *node) {
       printf("  not rax\n");
       printf("  push rax\n");
       return;
+    case ND_LOGOR: {
+      int seq = labelseq++;
+      gen(node->lhs);
+      // lhsの値が0以外ならtrueへジャンプ
+      printf("  pop rax\n");
+      printf("  cmp rax, 0\n");
+      printf("  jne .L.true.%d\n", seq);
+      // rhsの値が0以外ならtrueへジャンプ
+      gen(node->rhs);
+      printf("  pop rax\n");
+      printf("  cmp rax, 0\n");
+      printf("  jne .L.true.%d\n", seq);
+      // lhsとrhsがどちらも0なら0(false)をpush
+      printf("  push 0\n");
+      printf("  jmp .L.end.%d\n", seq);
+      printf(".L.true.%d:\n", seq);
+      printf("  push 1\n");
+      printf(".L.end.%d:\n", seq);
+      return;
+    }
+    case ND_LOGAND: {
+      int seq = labelseq++;
+      gen(node->lhs);
+      // lhsの値が0ならfalseへジャンプ
+      printf("  pop rax\n");
+      printf("  cmp rax, 0\n");
+      printf("  je .L.false.%d\n", seq);
+      // rhsの値が0ならfalseへジャンプ
+      gen(node->rhs);
+      printf("  pop rax\n");
+      printf("  cmp rax, 0\n");
+      printf("  je .L.false.%d\n", seq);
+      // lhsとrhsがどちらも0でないなら1(true)をpush
+      printf("  push 1\n");
+      printf("  jmp .L.end.%d\n", seq);
+      printf(".L.false.%d:\n", seq);
+      printf("  push 0\n");
+      printf(".L.end.%d:\n", seq);
+      return;
+    }
     default:;
   }
 

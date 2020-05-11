@@ -45,6 +45,12 @@ Node *expr();
 
 Node *assign();
 
+Node *logor();
+
+Node *logor();
+
+Node *logand();
+
 Node *bitor();
 
 Node *bitxor();
@@ -182,6 +188,22 @@ Node *new_node_stmt_expr() {
 Node *new_node_comma(Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_COMMA;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node_logor(Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_LOGOR;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node_logand(Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_LOGAND;
   node->lhs = lhs;
   node->rhs = rhs;
   return node;
@@ -890,10 +912,10 @@ Node *expr() {
   return node;
 }
 
-// assign = bitor (assign-op assign)?
+// assign = logor (assign-op assign)?
 // assign-op = "=" | "+=" | "-=" | "*=" | "/="
 Node *assign() {
-  Node *node = bitor();
+  Node *node = logor();
 
   if (consume("="))
     return new_node(ND_ASSIGN, node, assign());
@@ -919,6 +941,23 @@ Node *assign() {
     else
       return new_node(ND_SUB_EQ, node, assign());
   }
+
+  return node;
+}
+
+// logor = logand ("||" logand)*
+Node *logor() {
+  Node *node = logand();
+  while (consume("||"))
+    node = new_node_logor(node, logand());
+  return node;
+}
+
+// logand = bitor ("&&" bitor)*
+Node *logand() {
+  Node *node = bitor();
+  while (consume("&&"))
+    node = new_node_logand(node, bitor());
 
   return node;
 }

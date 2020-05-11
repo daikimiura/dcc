@@ -91,6 +91,8 @@ void add_type(Node *node) {
     case ND_BITAND: // &
     case ND_BITOR: // |
     case ND_BITXOR: // ^
+    case ND_LOGAND: // &&
+    case ND_LOGOR: // ||
       node->ty = int_type;
       return;
     case ND_PTR_ADD: // ptr + num, num + ptr
