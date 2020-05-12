@@ -153,7 +153,7 @@ struct Node {
   NodeKind kind; // ノードの種類
   Node *next; // 次のノード(';'区切りで複数の式を書く場合 or 関数の引数)
   Type *ty; // ノードの型(Type)
-  Node *lhs; // 左辺
+  Node *lhs; // 左辺 or kindがND_MEMBERの時、構造体 ex.) `a.x` の `a`
   Node *rhs; // 右辺
   Var *var; // kindがND_VARの場合、その変数
   long val; // kindがND_NUMの場合、その値
@@ -222,6 +222,8 @@ struct Type {
   TypeKind kind;
   int size; // sizeof()の値
   int align; // アラインメント http://www5d.biglobe.ne.jp/~noocyte/Programming/Alignment.html
+  bool is_incomplete; // 不完全な型かどうか ex.) int a[];
+
   Type *ptr_to; // kindがTY_PTRの時、指しているTypeオブジェクトへのポインタ
   int array_len; // kindがTY_ARRAYの時、配列の長さ
   Member *members; // kindがTY_STRUCTの時、構造体のメンバ

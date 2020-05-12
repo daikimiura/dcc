@@ -353,13 +353,24 @@ void push_tag_scope(Token *tag, Type *ty) {
 }
 
 // 配列宣言時の型のsuffix(配列の要素数)を読み取る
-// type-suffix = ("[" num "]" type-suffix)?
+// type-suffix = ("[" num? "]" type-suffix)?
 Type *type_suffix(Type *ty) {
   if (!consume("["))
     return ty;
-  int size = expect_number();
-  expect("]");
+
+  int size = 0;
+  bool is_incomplete = true;
+
+  if (!consume("]")) {
+    size = expect_number();
+    is_incomplete = false;
+    expect("]");
+  }
+
   ty = type_suffix(ty);
+  if (ty->is_incomplete)
+    error_at(token->str, "不完全な型です");
+  ty->is_incomplete = is_incomplete;
   return array_of(ty, size);
 }
 
