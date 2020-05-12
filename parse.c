@@ -370,8 +370,10 @@ Type *type_suffix(Type *ty) {
   ty = type_suffix(ty);
   if (ty->is_incomplete)
     error_at(token->str, "不完全な型です");
+
+  ty = array_of(ty, size);
   ty->is_incomplete = is_incomplete;
-  return array_of(ty, size);
+  return ty;
 }
 
 // type-name = basetype abstract-declarator
@@ -388,6 +390,12 @@ VarList *read_func_param() {
   char *name = NULL;
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
+
+  // 配列型のparamは、配列の先頭を指すポインタ型に衰退(decay)する
+  // ex.) `*arg[]` は　`**arg` になる
+  if (ty->kind == TY_ARRAY)
+    ty = pointer_to(ty->ptr_to);
+
   VarList *vl = calloc(1, sizeof(VarList));
   vl->var = new_lvar(name, ty);
   return vl;

@@ -67,6 +67,8 @@ int fib(int x) {
 
 static int static_fn() { return 3; }
 
+int param_decay(int x[]) { return x[0]; }
+
 int main() {
   assert(0, 0, "0");
   assert(42, 42, "42");
@@ -1280,14 +1282,20 @@ int main() {
   assert(0, 0b1111 ^ 0b1111, "0b1111^0b1111");
   assert(0b110100, 0b111000 ^ 0b001100, "0b111000^0b001100");
 
-  assert(1, 0||1, "0||1");
-  assert(1, 0||(2-2)||5, "0||(2-2)||5");
-  assert(0, 0||0, "0||0");
-  assert(0, 0||(2-2), "0||(2-2)");
+  assert(1, 0 || 1, "0||1");
+  assert(1, 0 || (2 - 2) || 5, "0||(2-2)||5");
+  assert(0, 0 || 0, "0||0");
+  assert(0, 0 || (2 - 2), "0||(2-2)");
 
-  assert(0, 0&&1, "0&&1");
-  assert(0, (2-2)&&5, "(2-2)&&5");
-  assert(1, 1&&5, "1&&5");
+  assert(0, 0 && 1, "0&&1");
+  assert(0, (2 - 2) && 5, "(2-2)&&5");
+  assert(1, 1 && 5, "1&&5");
+
+  assert(3, ({
+    int x[2];
+    x[0] = 3;
+    param_decay(x);
+  }), "int x[2]; x[0]=3; param_decay(x);");
 
   printf("OK\n");
   return 0;
