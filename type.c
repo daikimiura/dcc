@@ -47,6 +47,12 @@ Type *enum_type() {
   return new_type(TY_ENUM, 4, 4);
 }
 
+Type *struct_type() {
+  Type *ty = new_type(TY_STRUCT, 0, 1);
+  ty->is_incomplete = true;
+  return ty;
+}
+
 // n以上の整数のうち、alignで割り切れる最小の整数を返す
 // alignは2の冪乗
 // align_to(33, 8) => 40

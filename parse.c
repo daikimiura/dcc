@@ -8,6 +8,7 @@ static VarList *locals;
 static VarList *globals;
 static VarScope *var_scope;
 static TagScope *tag_scope;
+static int scope_depth;
 
 typedef enum {
   TYPEDEF = 1 << 0,
@@ -80,6 +81,7 @@ Scope *enter_scope() {
   Scope *sc = calloc(1, sizeof(Scope));
   sc->var_scope = var_scope;
   sc->tag_scope = tag_scope;
+  scope_depth++;
   return sc;
 }
 
@@ -87,6 +89,7 @@ Scope *enter_scope() {
 void leave_scope(Scope *sc) {
   var_scope = sc->var_scope;
   tag_scope = sc->tag_scope;
+  scope_depth--;
 }
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
@@ -302,6 +305,7 @@ VarScope *push_var_scope(char *name) {
   VarScope *sc = calloc(1, sizeof(VarScope));
   sc->name = name;
   sc->next = var_scope;
+  sc->depth = scope_depth;
   var_scope = sc;
   return sc;
 }
@@ -348,6 +352,7 @@ void push_tag_scope(Token *tag, Type *ty) {
   TagScope *sc = calloc(1, sizeof(TagScope));
   sc->next = tag_scope;
   sc->name = strndup(tag->str, tag->len);
+  sc->depth = scope_depth;
   sc->ty = ty;
   tag_scope = sc;
 }
@@ -529,19 +534,44 @@ Function *function() {
   return fn;
 }
 
-// struct-decl = "struct" ident
-//             | "struct" ident? "{" struct-member "}"
+// struct-decl = "struct" ident? ("{" struct-member "}")?
 Type *struct_decl() {
   expect("struct");
   Token *tag = consume_ident(); // 構造体タグ
   if (tag && !peek("{")) { // 構造体タグを用いた宣言のとき
     TagScope *sc = find_tag(tag);
-    if (!sc)
-      error_at(tag->str, "構造体タグが定義されていません");
+
+    if (!sc) {
+      // 構造体の不完全型に対応
+      Type *ty = struct_type();
+      push_tag_scope(tag, ty);
+      return ty;
+    }
+
     return sc->ty;
   }
 
-  expect("{");
+  // `struct *foo` は無名の不完全構造体へのポインタになる
+  if (!consume("{"))
+    return struct_type();
+
+  Type *ty;
+  TagScope *sc = NULL;
+  if (tag)
+    sc = find_tag(tag);
+
+  if (sc && sc->depth == scope_depth) {
+    // 同じタグの構造体が同じスコープで再定義された場合
+    if (sc->ty->kind != TY_STRUCT)
+      error_at(tag->str, "構造体タグではありません");
+    ty = sc->ty;
+  } else {
+    // 下のように再帰的な構造体宣言ができるように、不完全型として先にスコープにpushしておく
+    // `struct T { struct T *next; }`
+    ty = struct_type();
+    if (tag)
+      push_tag_scope(tag, ty);
+  }
 
   // メンバを連結リストで管理
   Member head = {};
@@ -552,8 +582,6 @@ Type *struct_decl() {
     cur = cur->next;
   }
 
-  Type *ty = calloc(1, sizeof(Type));
-  ty->kind = TY_STRUCT;
   ty->members = head.next;
 
   int offset = 0;
@@ -569,8 +597,7 @@ Type *struct_decl() {
   }
   ty->size = align_to(offset, ty->align);
 
-  if (tag)
-    push_tag_scope(tag, ty);
+  ty->is_incomplete = false;
 
   return ty;
 }

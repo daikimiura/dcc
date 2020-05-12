@@ -249,6 +249,8 @@ struct VarScope {
   VarScope *next;
   char *name;
   Var *var;
+  int depth;
+
   Type *type_def; // typedefのとき、型の実体
   Type *enum_ty; // enumの時、その型
   int enum_val; // enumの時、その値
@@ -259,6 +261,7 @@ typedef struct TagScope TagScope;
 struct TagScope {
   TagScope *next;
   char *name;
+  int depth;
   Type *ty;
 };
 
@@ -276,6 +279,8 @@ Type *pointer_to(Type *ptr_to);
 Type *func_type(Type *return_ty);
 
 Type *enum_type();
+
+Type *struct_type();
 
 void add_type(Node *node);
 
