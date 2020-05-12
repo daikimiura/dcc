@@ -825,6 +825,7 @@ Node *stmt(void) {
 //      | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
 //      | expr ";"
 //      | "{" stmt* "}"
+//      | "break" ";"
 //      | declaration
 Node *stmt2() {
   if (consume("return")) {
@@ -903,6 +904,11 @@ Node *stmt2() {
 
     node->body = head.next;
     return node;
+  }
+
+  if (consume("break")) {
+    expect(";");
+    return new_node(ND_BREAK, NULL, NULL);
   }
 
   if (is_typename())

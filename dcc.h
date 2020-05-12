@@ -136,6 +136,7 @@ typedef enum {
   ND_VAR, // ローカル変数 or グローバル変数
   ND_NUM, // 整数
   ND_RETURN, // return
+  ND_BREAK, // break
   ND_IF, // if
   ND_WHILE, // while
   ND_FOR, // for

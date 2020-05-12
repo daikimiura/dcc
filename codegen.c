@@ -9,6 +9,9 @@ static void gen(Node *node);
 // アセンブリのラベル番号(連番)
 static int labelseq = 1;
 
+// break時にjmpするラベルの番号
+static int brkseq;
+
 // 実行中の関数の名前
 static char *funcname;
 
@@ -299,29 +302,37 @@ void gen(Node *node) {
     }
     case ND_WHILE: {
       int seq = labelseq++;
+      int brk = brkseq;
+      brkseq = seq;
+
       printf(".L.begin.%d:\n", seq);
       gen(node->cond);
       printf("  pop rax\n");
       printf("  cmp rax, 0\n");
-      printf("  je .L.end.%d\n", seq);
+      printf("  je .L.break.%d\n", seq);
       gen(node->then);
       printf("  jmp .L.begin.%d\n", seq);
-      printf(".L.end.%d:\n", seq);
+      printf(".L.break.%d:\n", seq);
+
+      brkseq = brk;
       return;
     }
     case ND_FOR: {
       int seq = labelseq++;
+      int brk = brkseq;
+      brkseq = seq;
+
       if (node->init)
         gen(node->init);
 
       printf(".L.begin.%d:\n", seq);
 
-      if (node->cond)
+      if (node->cond) {
         gen(node->cond);
-
-      printf("  pop rax\n");
-      printf("  cmp rax, 0\n");
-      printf("  je .L.end.%d\n", seq);
+        printf("  pop rax\n");
+        printf("  cmp rax, 0\n");
+        printf("  je .L.break.%d\n", seq);
+      }
 
       gen(node->then);
 
@@ -329,7 +340,9 @@ void gen(Node *node) {
         gen(node->inc);
 
       printf("  jmp .L.begin.%d\n", seq);
-      printf(".L.end.%d:\n", seq);
+      printf(".L.break.%d:\n", seq);
+
+      brkseq = brk;
       return;
     }
     case ND_BLOCK:
@@ -489,6 +502,11 @@ void gen(Node *node) {
       printf(".L.end.%d:\n", seq);
       return;
     }
+    case ND_BREAK:
+      if (brkseq == 0)
+        error("break文が無効です");
+      printf("  jmp .L.break.%d\n", brkseq);
+      return;
     default:;
   }
 
