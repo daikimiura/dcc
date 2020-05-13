@@ -400,6 +400,24 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "switch", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_RESERVED, cur, p, 6);
+      p += 6;
+      continue;
+    }
+
+    if (strncmp(p, "case", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_RESERVED, cur, p, 4);
+      p += 4;
+      continue;
+    }
+
+    if (strncmp(p, "default", 7) == 0 && !is_alnum(p[7])) {
+      cur = new_token(TK_RESERVED, cur, p, 7);
+      p += 7;
+      continue;
+    }
+
     if (is_alpha(*p)) {
       char *q = p++;
       while (is_alnum(*p))

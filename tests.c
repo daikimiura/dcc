@@ -1435,6 +1435,115 @@ int main() {
     i;
   }), "int i=0; goto g; h: i++; i: i++; j: i++; i;");
 
+  assert(5, ({
+    int i = 0;
+    switch (0) {
+      case 0:
+        i = 5;
+        break;
+      case 1:
+        i = 6;
+        break;
+      case 2:
+        i = 7;
+        break;
+    }
+    i;
+  }), "int i=0; switch(0) { case 0:i=5;break; case 1:i=6;break; case 2:i=7;break; } i;");
+  assert(6, ({
+    int i = 0;
+    switch (1) {
+      case 0:
+        i = 5;
+        break;
+      case 1:
+        i = 6;
+        break;
+      case 2:
+        i = 7;
+        break;
+    }
+    i;
+  }), "int i=0; switch(1) { case 0:i=5;break; case 1:i=6;break; case 2:i=7;break; } i;");
+  assert(7, ({
+    int i = 0;
+    switch (2) {
+      case 0:
+        i = 5;
+        break;
+      case 1:
+        i = 6;
+        break;
+      case 2:
+        i = 7;
+        break;
+    }
+    i;
+  }), "int i=0; switch(2) { case 0:i=5;break; case 1:i=6;break; case 2:i=7;break; } i;");
+  assert(0, ({
+    int i = 0;
+    switch (3) {
+      case 0:
+        i = 5;
+        break;
+      case 1:
+        i = 6;
+        break;
+      case 2:
+        i = 7;
+        break;
+    }
+    i;
+  }), "int i=0; switch(3) { case 0:i=5;break; case 1:i=6;break; case 2:i=7;break; } i;");
+  assert(5, ({
+    int i = 0;
+    switch (0) {
+      case 0:
+        i = 5;
+        break;
+      default:
+        i = 7;
+    }
+    i;
+  }), "int i=0; switch(0) { case 0:i=5;break; default:i=7; } i;");
+  assert(7, ({
+    int i = 0;
+    switch (1) {
+      case 0:
+        i = 5;
+        break;
+      default:
+        i = 7;
+    }
+    i;
+  }), "int i=0; switch(1) { case 0:i=5;break; default:i=7; } i;");
+  assert(2, ({
+    int i = 0;
+    switch (1) {
+      case 0:
+        0;
+      case 1:
+        0;
+      case 2:
+        0;
+        i = 2;
+    }
+    i;
+  }), "int i=0; switch(1) { case 0: 0; case 1: 0; case 2: 0; i=2; } i;");
+  assert(0, ({
+    int i = 0;
+    switch (3) {
+      case 0:
+        0;
+      case 1:
+        0;
+      case 2:
+        0;
+        i = 2;
+    }
+    i;
+  }), "int i=0; switch(3) { case 0: 0; case 1: 0; case 2: 0; i=2; } i;");
+
   printf("OK\n");
   return 0;
 }

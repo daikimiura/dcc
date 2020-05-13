@@ -10,6 +10,9 @@ static VarScope *var_scope;
 static TagScope *tag_scope;
 static int scope_depth;
 
+// switch文をパーズしている時に、パーズ中のNode(ND_SWITCH)を指す
+static Node *current_switch = NULL;
+
 typedef enum {
   TYPEDEF = 1 << 0,
   STATIC = 1 << 1,
@@ -829,6 +832,9 @@ Node *stmt(void) {
 //      | "continue" ";"
 //      | "goto" ident ";"
 //      | ident ":" stmt  // gotoで飛ぶ先のラベル付きstatement
+//      | "switch" "(" expr ")" stmt
+//      | "case" num ":" stmt
+//      | "default" num ":" stmt
 //      | declaration
 Node *stmt2() {
   if (consume("return")) {
@@ -923,6 +929,44 @@ Node *stmt2() {
     Node *node = new_node(ND_GOTO, NULL, NULL);
     node->label_name = expect_ident();
     expect(";");
+    return node;
+  }
+
+  if (consume("switch")) {
+    Node *node = new_node(ND_SWITCH, NULL, NULL);
+    expect("(");
+    node->cond = expr();
+    expect(")");
+
+    Node *sw = current_switch;
+    current_switch = node;
+    node->then = stmt();
+    // switch文内のパースが終わったらcurrent_switchを戻す
+    current_switch = sw;
+    return node;
+  }
+
+  if (consume("case")) {
+    if (!current_switch)
+      error_at(token->str, "switch文が見つかりません");
+
+    int val = expect_number();
+    expect(":");
+
+    Node *node = new_node_unary(ND_CASE, stmt());
+    node->val = val;
+    node->case_next = current_switch->case_next;
+    current_switch->case_next = node;
+    return node;
+  }
+
+  if (consume("default")) {
+    if (!current_switch)
+      error_at(token->str, "switch文が見つかりません");
+    expect(":");
+
+    Node *node = new_node_unary(ND_CASE, stmt());
+    current_switch->default_case = node;
     return node;
   }
 

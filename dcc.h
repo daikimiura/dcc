@@ -141,6 +141,8 @@ typedef enum {
   ND_IF, // if
   ND_WHILE, // while
   ND_FOR, // for
+  ND_SWITCH, // switch
+  ND_CASE, // case
   ND_BLOCK, // ブロック { ... }
   ND_FUNCALL, // 関数呼び出し
   ND_EXPR_STMT, // Expression statement (式文)
@@ -163,7 +165,7 @@ struct Node {
   long val; // kindがND_NUMの場合、その値
 
   // 制御構文
-  Node *cond; // kindがND_IF/ND_WHILE/ND_FORの場合、その条件式
+  Node *cond; // kindがND_IF/ND_WHILE/ND_FOR/ND_SWITCHの場合、その条件式。
   Node *then; // kindがND_IF/ND_WHILE/ND_FORの場合、条件がtrueの時に評価される式
   Node *els; // kindがND_IFの場合、条件がfalseの時に評価される式
   Node *init; // kindがND_FORの場合、初期値
@@ -179,7 +181,13 @@ struct Node {
   char *funcname; // kindがND_FUNCALLの時、関数名
   Node *args; // kindがND_FUNCALLの時、引数
 
+  // goto
   char *label_name; // kindがND_GOTOのとき、飛ぶ先のラベル名。kindがND_LABELのとき、そのラベル名。
+
+  // switch-case
+  Node *case_next; // kindがND_CASEのとき、次のcase。kindがND_SWITCHのとき、最初のcase。
+  Node *default_case; // kindがND_SWITCHのとき、defaultのcase
+  int case_label; // kindがND_CASEのとき、アセンブリでのラベルのシーケンス番号
 };
 
 typedef struct Function Function;
