@@ -520,6 +520,13 @@ void gen(Node *node) {
         error("continue文が無効です");
       printf("  jmp .L.continue.%d\n", contseq);
       return;
+    case ND_GOTO:
+      printf("  jmp .L.label.%s.%s\n", funcname, node->label_name);
+      return;
+    case ND_LABEL:
+      printf(".L.label.%s.%s:\n", funcname, node->label_name);
+      gen(node->lhs);
+      return;
     default:;
   }
 

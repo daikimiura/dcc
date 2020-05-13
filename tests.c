@@ -1401,6 +1401,39 @@ int main() {
     j;
   }), "int i=0; int j=0; while(!i) { while (j++!=10) continue; break; } j;");
 
+  assert(3, ({
+    int i = 0;
+    goto a;
+    a:
+    i++;
+    b:
+    i++;
+    c:
+    i++;
+    i;
+  }), "int i=0; goto a; a: i++; b: i++; c: i++; i;");
+  assert(2, ({
+    int i = 0;
+    goto e;
+    d:
+    i++;
+    e:
+    i++;
+    f:
+    i++;
+    i;
+  }), "int i=0; goto d; d: i++; e: i++; f: i++; i;");
+  assert(1, ({
+    int i = 0;
+    goto i;
+    g:
+    i++;
+    h:
+    i++;
+    i:
+    i++;
+    i;
+  }), "int i=0; goto g; h: i++; i: i++; j: i++; i;");
 
   printf("OK\n");
   return 0;

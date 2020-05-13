@@ -146,6 +146,8 @@ typedef enum {
   ND_EXPR_STMT, // Expression statement (式文)
   ND_STMT_EXPR, // GNU Statement expression
   ND_CAST, // 型キャスト
+  ND_GOTO, // goto
+  ND_LABEL, // gotoで飛ぶ先を指定するラベル
   ND_NULL,
 } NodeKind;
 
@@ -176,6 +178,8 @@ struct Node {
   // 関数
   char *funcname; // kindがND_FUNCALLの時、関数名
   Node *args; // kindがND_FUNCALLの時、引数
+
+  char *label_name; // kindがND_GOTOのとき、飛ぶ先のラベル名。kindがND_LABELのとき、そのラベル名。
 };
 
 typedef struct Function Function;

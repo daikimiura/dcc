@@ -827,6 +827,8 @@ Node *stmt(void) {
 //      | "{" stmt* "}"
 //      | "break" ";"
 //      | "continue" ";"
+//      | "goto" ident ";"
+//      | ident ":" stmt  // gotoで飛ぶ先のラベル付きstatement
 //      | declaration
 Node *stmt2() {
   if (consume("return")) {
@@ -915,6 +917,24 @@ Node *stmt2() {
   if (consume("continue")) {
     expect(";");
     return new_node(ND_CONTINUE, NULL, NULL);
+  }
+
+  if (consume("goto")) {
+    Node *node = new_node(ND_GOTO, NULL, NULL);
+    node->label_name = expect_ident();
+    expect(";");
+    return node;
+  }
+
+  Token *tok;
+  if ((tok = consume_ident())) {
+    if (consume(":")) {
+      Node *node = new_node_unary(ND_LABEL, stmt());
+      node->label_name = strndup(tok->str, tok->len);
+      return node;
+    }
+    // ラベル付きstatementじゃなかったらtokenを戻す
+    token = tok;
   }
 
   if (is_typename())
