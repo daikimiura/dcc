@@ -826,6 +826,7 @@ Node *stmt(void) {
 //      | expr ";"
 //      | "{" stmt* "}"
 //      | "break" ";"
+//      | "continue" ";"
 //      | declaration
 Node *stmt2() {
   if (consume("return")) {
@@ -909,6 +910,11 @@ Node *stmt2() {
   if (consume("break")) {
     expect(";");
     return new_node(ND_BREAK, NULL, NULL);
+  }
+
+  if (consume("continue")) {
+    expect(";");
+    return new_node(ND_CONTINUE, NULL, NULL);
   }
 
   if (is_typename())

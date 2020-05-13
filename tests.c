@@ -1346,6 +1346,61 @@ int main() {
     i;
   }), "int i=0; while { if (i == 3) break; } i;");
 
+  assert(10, ({
+    int i = 0;
+    int j = 0;
+    for (; i < 10; i++) {
+      if (i > 5) continue;
+      j++;
+    }
+    i;
+  }), "int i=0; int j=0; for (;i<10;i++) { if (i>5) continue; j++; } i;");
+  assert(6, ({
+    int i = 0;
+    int j = 0;
+    for (; i < 10; i++) {
+      if (i > 5) continue;
+      j++;
+    }
+    j;
+  }), "int i=0; int j=0; for (;i<10;i++) { if (i>5) continue; j++; } j;");
+  assert(10, ({
+    int i = 0;
+    int j = 0;
+    for (; !i;) {
+      for (; j != 10; j++) continue;
+      break;
+    }
+    j;
+  }), "int i=0; int j=0; for(;!i;) { for (;j!=10;j++) continue; break; } j;");
+  assert(11, ({
+    int i = 0;
+    int j = 0;
+    while (i++ < 10) {
+      if (i > 5) continue;
+      j++;
+    }
+    i;
+  }), "int i=0; int j=0; while (i++<10) { if (i>5) continue; j++; } i;");
+  assert(5, ({
+    int i = 0;
+    int j = 0;
+    while (i++ < 10) {
+      if (i > 5) continue;
+      j++;
+    }
+    j;
+  }), "int i=0; int j=0; while (i++<10) { if (i>5) continue; j++; } j;");
+  assert(11, ({
+    int i = 0;
+    int j = 0;
+    while (!i) {
+      while (j++ != 10) continue;
+      break;
+    }
+    j;
+  }), "int i=0; int j=0; while(!i) { while (j++!=10) continue; break; } j;");
+
 
   printf("OK\n");
   return 0;
