@@ -147,6 +147,7 @@ typedef enum {
   ND_FOR, // for
   ND_SWITCH, // switch
   ND_CASE, // case
+  ND_TERNARY, // ?:
   ND_BLOCK, // ブロック { ... }
   ND_FUNCALL, // 関数呼び出し
   ND_EXPR_STMT, // Expression statement (式文)
@@ -171,7 +172,7 @@ struct Node {
   // 制御構文
   Node *cond; // kindがND_IF/ND_WHILE/ND_FOR/ND_SWITCHの場合、その条件式。
   Node *then; // kindがND_IF/ND_WHILE/ND_FORの場合、条件がtrueの時に評価される式
-  Node *els; // kindがND_IFの場合、条件がfalseの時に評価される式
+  Node *els; // kindがND_IF/ND_TERNARYの場合、条件がfalseの時に評価される式
   Node *init; // kindがND_FORの場合、初期値
   Node *inc; // kindがND_FORの場合、ループごとの増分
 

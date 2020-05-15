@@ -49,6 +49,8 @@ Node *expr();
 
 Node *assign();
 
+Node *conditional();
+
 Node *logor();
 
 Node *logor();
@@ -1036,10 +1038,10 @@ Node *expr() {
   return node;
 }
 
-// assign = logor (assign-op assign)?
+// assign = conditional (assign-op assign)?
 // assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>="
 Node *assign() {
-  Node *node = logor();
+  Node *node = conditional();
 
   if (consume("="))
     return new_node(ND_ASSIGN, node, assign());
@@ -1075,6 +1077,20 @@ Node *assign() {
   }
 
   return node;
+}
+
+// conditional = logor ("?" expr ":" conditional)?
+Node *conditional() {
+  Node *node = logor();
+  if (!consume("?"))
+    return node;
+
+  Node *ternary = new_node(ND_TERNARY, NULL, NULL);
+  ternary->cond = node;
+  ternary->then = expr();
+  expect(":");
+  ternary->els = conditional();
+  return ternary;
 }
 
 // logor = logand ("||" logand)*

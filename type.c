@@ -142,6 +142,9 @@ void add_type(Node *node) {
     case ND_COMMA:
       node->ty = node->rhs->ty;
       return;
+    case ND_TERNARY:
+      node->ty = node->then->ty;
+      return;
     case ND_STMT_EXPR: {
       Node *last = node->body;
       while (last->next)

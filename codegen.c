@@ -573,6 +573,19 @@ void gen(Node *node) {
       printf(".L.label.%s.%s:\n", funcname, node->label_name);
       gen(node->lhs);
       return;
+    case ND_TERNARY: {
+      int seq = labelseq++;
+      gen(node->cond);
+      printf("  pop rax\n");
+      printf("  cmp rax, 0\n");
+      printf("  je .L.else.%d\n", seq);
+      gen(node->then);
+      printf("  jmp .L.end.%d\n", seq);
+      printf(".L.else.%d:\n", seq);
+      gen(node->els);
+      printf(".L.end.%d:\n", seq);
+      return;
+    }
     default:;
   }
 
