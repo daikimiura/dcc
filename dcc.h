@@ -118,6 +118,8 @@ typedef enum {
   ND_PTR_SUB_EQ, // -=
   ND_MUL_EQ, // *=
   ND_DIV_EQ, // /=
+  ND_SHL_EQ, // <<=
+  ND_SHR_EQ, // >>=
   ND_COMMA, // ,
   ND_ADDR, // &
   ND_DEREF, // *
@@ -128,6 +130,8 @@ typedef enum {
   ND_BITAND, // &
   ND_BITOR, // |
   ND_BITXOR, // ^
+  ND_SHL, // <<
+  ND_SHR, // >>
   ND_PRE_INC, // ++ (前置)
   ND_PRE_DEC, // -- (前置)
   ND_POST_INC, // ++ (後置)

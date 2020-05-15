@@ -65,6 +65,8 @@ Node *equality();
 
 Node *relational();
 
+Node *shift();
+
 Node *add();
 
 Node *mul();
@@ -1035,7 +1037,7 @@ Node *expr() {
 }
 
 // assign = logor (assign-op assign)?
-// assign-op = "=" | "+=" | "-=" | "*=" | "/="
+// assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>="
 Node *assign() {
   Node *node = logor();
 
@@ -1062,6 +1064,14 @@ Node *assign() {
       return new_node(ND_PTR_SUB_EQ, node, assign());
     else
       return new_node(ND_SUB_EQ, node, assign());
+  }
+
+  if (consume("<<=")) {
+    return new_node(ND_SHL_EQ, node, assign());
+  }
+
+  if (consume(">>=")) {
+    return new_node(ND_SHR_EQ, node, assign());
   }
 
   return node;
@@ -1125,19 +1135,32 @@ Node *equality() {
   }
 }
 
-// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+// relational = shift ("<" shift | "<=" shift | ">" shift | ">=" shift)*
 Node *relational() {
-  Node *node = add();
+  Node *node = shift();
 
   for (;;) {
     if (consume("<"))
-      node = new_node(ND_LT, node, add());
+      node = new_node(ND_LT, node, shift());
     else if (consume("<="))
-      node = new_node(ND_LE, node, add());
+      node = new_node(ND_LE, node, shift());
     else if (consume(">"))
-      node = new_node(ND_LT, add(), node);
+      node = new_node(ND_LT, shift(), node);
     else if (consume(">="))
-      node = new_node(ND_LE, add(), node);
+      node = new_node(ND_LE, shift(), node);
+    else
+      return node;
+  }
+}
+
+// shift = add ("<<" add | ">>" add)*
+Node *shift() {
+  Node *node = add();
+  for (;;) {
+    if (consume("<<"))
+      node = new_node(ND_SHL, node, add());
+    else if (consume(">>"))
+      node = new_node(ND_SHR, node, add());
     else
       return node;
   }

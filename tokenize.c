@@ -432,13 +432,20 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "<<=", 3) == 0 || strncmp(p, ">>=", 3) == 0) {
+      cur = new_token(TK_RESERVED, cur, p, 3);
+      p += 3;
+      continue;
+    }
+
     if (strncmp(p, "==", 2) == 0 || strncmp(p, "!=", 2) == 0 ||
         strncmp(p, "<=", 2) == 0 || strncmp(p, ">=", 2) == 0 ||
         strncmp(p, "->", 2) == 0 || strncmp(p, "++", 2) == 0 ||
         strncmp(p, "--", 2) == 0 || strncmp(p, "+=", 2) == 0 ||
         strncmp(p, "-=", 2) == 0 || strncmp(p, "*=", 2) == 0 ||
         strncmp(p, "/=", 2) == 0 || strncmp(p, "&&", 2) == 0 ||
-        strncmp(p, "||", 2) == 0) {
+        strncmp(p, "||", 2) == 0 || strncmp(p, "<<", 2) == 0 ||
+        strncmp(p, ">>", 2) == 0) {
       cur = new_token(TK_RESERVED, cur, p, 2);
       p += 2;
       continue;
