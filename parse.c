@@ -47,6 +47,8 @@ Node *stmt2();
 
 Node *expr();
 
+long const_expr();
+
 Node *assign();
 
 Node *conditional();
@@ -365,7 +367,7 @@ void push_tag_scope(Token *tag, Type *ty) {
 }
 
 // 配列宣言時の型のsuffix(配列の要素数)を読み取る
-// type-suffix = ("[" num? "]" type-suffix)?
+// type-suffix = ("[" const-expr? "]" type-suffix)?
 Type *type_suffix(Type *ty) {
   if (!consume("["))
     return ty;
@@ -374,7 +376,7 @@ Type *type_suffix(Type *ty) {
   bool is_incomplete = true;
 
   if (!consume("]")) {
-    size = expect_number();
+    size = const_expr();
     is_incomplete = false;
     expect("]");
   }
@@ -634,7 +636,7 @@ static bool consume_end(void) {
 
 // enum-specifier = "enum" ident
 //                | "enum" ident? "{" enum-list? "}"
-// enum-list = ident ("=" num)? ("," ident ("=" num)?)* ","?
+// enum-list = ident ("=" const-expr)? ("," ident ("=" const-expr)?)* ","?
 Type *enum_specifier() {
   expect("enum");
   Type *ty = enum_type();
@@ -642,6 +644,7 @@ Type *enum_specifier() {
   Token *tag = consume_ident();
 
   // すでに宣言済みのenumを指定する場合
+  // ex.) enum Foo bar;
   if (tag && !peek("{")) {
     TagScope *sc = find_tag(tag);
     if (!sc)
@@ -652,15 +655,19 @@ Type *enum_specifier() {
   }
 
   // 新しいenumを宣言する場合
+  // ex.) enum Foo { A, B, C };
   expect("{");
   int cnt = 0;
   for (;;) {
     char *name = expect_ident();
     if (consume("="))
-      cnt = expect_number();
+      cnt = const_expr();
 
     VarScope *sc = push_var_scope(name);
     sc->enum_ty = ty;
+    // 例えば
+    // enum Foo { A = 3, B, C = 7 };
+    // のとき、Aのenum_valは3、Bのenum_valは4、Cのenum_valは7になる
     sc->enum_val = cnt++;
 
     if (consume_end())
@@ -837,7 +844,7 @@ Node *stmt(void) {
 //      | "goto" ident ";"
 //      | ident ":" stmt  // gotoで飛ぶ先のラベル付きstatement
 //      | "switch" "(" expr ")" stmt
-//      | "case" num ":" stmt
+//      | "case" const-expr ":" stmt
 //      | "default" num ":" stmt
 //      | declaration
 Node *stmt2() {
@@ -954,7 +961,7 @@ Node *stmt2() {
     if (!current_switch)
       error_at(token->str, "switch文が見つかりません");
 
-    int val = expect_number();
+    int val = const_expr();
     expect(":");
 
     Node *node = new_node_unary(ND_CASE, stmt());
@@ -1091,6 +1098,58 @@ Node *conditional() {
   expect(":");
   ternary->els = conditional();
   return ternary;
+}
+
+// nodeを定数式として評価する
+long eval(Node *node) {
+  switch (node->kind) {
+    case ND_ADD:
+      return eval(node->lhs) + eval(node->rhs);
+    case ND_SUB:
+      return eval(node->lhs) - eval(node->rhs);
+    case ND_MUL:
+      return eval(node->lhs) * eval(node->rhs);
+    case ND_DIV:
+      return eval(node->lhs) / eval(node->rhs);
+    case ND_BITAND:
+      return eval(node->lhs) & eval(node->rhs);
+    case ND_BITOR:
+      return eval(node->lhs) | eval(node->rhs);
+    case ND_BITXOR:
+      return eval(node->lhs) ^ eval(node->rhs);
+    case ND_SHL:
+      return eval(node->lhs) << eval(node->rhs);
+    case ND_SHR:
+      return eval(node->lhs) >> eval(node->rhs);
+    case ND_EQ:
+      return eval(node->lhs) == eval(node->rhs);
+    case ND_NE:
+      return eval(node->lhs) != eval(node->rhs);
+    case ND_LT:
+      return eval(node->lhs) < eval(node->rhs);
+    case ND_LE:
+      return eval(node->lhs) <= eval(node->rhs);
+    case ND_TERNARY:
+      return eval(node->cond) ? eval(node->then) : eval(node->els);
+    case ND_COMMA:
+      return eval(node->rhs);
+    case ND_NOT:
+      return !eval(node->lhs);
+    case ND_BIT_NOT:
+      return ~eval(node->lhs);
+    case ND_LOGAND:
+      return eval(node->lhs) && eval(node->rhs);
+    case ND_LOGOR:
+      return eval(node->lhs) || eval(node->rhs);
+    case ND_NUM:
+      return node->val;
+    default:
+      error_at(token->str, "定数式ではありません");
+  }
+}
+
+long const_expr() {
+  return eval(conditional());
 }
 
 // logor = logand ("||" logand)*
