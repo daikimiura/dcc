@@ -634,6 +634,18 @@ static bool consume_end(void) {
   return false;
 }
 
+bool peek_end() {
+  Token *tok = token;
+  bool ret = consume("}") || (consume(",") && consume("}"));
+  token = tok;
+  return ret;
+}
+
+void expect_end() {
+  if (!consume_end())
+    error_at(token->str, "リストの最後ではありません");
+}
+
 // enum-specifier = "enum" ident
 //                | "enum" ident? "{" enum-list? "}"
 // enum-list = ident ("=" const-expr)? ("," ident ("=" const-expr)?)* ","?
@@ -1000,8 +1012,74 @@ Node *stmt2() {
   return node;
 }
 
-// declaration = basetype declarator ("=" expr) ";"
-//             | basetype declarator ";"  // 構造体タグを用いた構造体の宣言
+typedef struct Designator Designator;
+
+// (多次元)配列の要素を指定する構造体
+struct Designator {
+  Designator *next;
+  int idx;
+};
+
+// desgの表すノードを返す
+Node *new_node_desg2(Var *var, Designator *desg) {
+  if (!desg)
+    return new_node_var(var);
+
+  Node *node = new_node_desg2(var, desg->next);
+  node = new_node_add(node, new_node_num(desg->idx));
+
+  return new_node_unary(ND_DEREF, node);
+}
+
+Node *new_node_desg(Var *var, Designator *desg, Node *rhs) {
+  Node *lhs = new_node_desg2(var, desg);
+  Node *node = new_node(ND_ASSIGN, lhs, rhs);
+
+  return new_node_unary(ND_EXPR_STMT, node);
+}
+
+// lvar-initializer2 = assign
+//                   | "{" lvar-initializer2 ("," lvar-initializer2)* ","? "}"
+Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
+  if (ty->kind == TY_ARRAY) {
+// 例えば x[2][3]={{1,2,3},{4,5,6}} は下のようなブロックに変換する
+// {
+//    *(*(x + 0) + 0) = 1;
+//    *(*(x + 0) + 1) = 2;
+//    *(*(x + 0) + 2) = 3;
+//    *(*(x + 1) + 0) = 4;
+//    *(*(x + 1) + 1) = 5;
+//    *(*(x + 1) + 2) = 6;
+// }
+//
+// 配列の初期化について、詳しくはここ↓
+// https://drive.google.com/file/d/1LIn5ikBwvs4RjMD65ilLeKhHB7BaHPMg/view?usp=sharing
+    expect("{");
+    int i = 0;
+
+    do {
+      Designator desg2 = {desg, i++};
+      cur = lvar_initializer2(cur, var, ty->ptr_to, &desg2);
+    } while (!peek_end() && consume(","));
+
+    expect_end();
+    return cur;
+  }
+
+  cur->next = new_node_desg(var, desg, assign());
+  return cur->next;
+}
+
+// lvar-initializer = lvar-initializer2
+Node *lvar_initializer(Var *lvar) {
+  Node head = {};
+  lvar_initializer2(&head, lvar, lvar->ty, NULL);
+  Node *node = new_node(ND_BLOCK, NULL, NULL);
+  node->body = head.next;
+  return node;
+}
+
+// declaration = basetype declarator ("=" lvar-initializer)? ";"
 Node *declaration() {
   StorageClass sclass;
   Type *ty = basetype(&sclass);
@@ -1025,11 +1103,9 @@ Node *declaration() {
     return new_node_null();
 
   expect("=");
-  Node *lhs = new_node_var(lvar);
-  Node *rhs = expr();
-  Node *node = new_node(ND_ASSIGN, lhs, rhs);
+  Node *node = lvar_initializer(lvar);
   expect(";");
-  return new_node_unary(ND_EXPR_STMT, node);
+  return node;
 }
 
 // expr = assign ("," assign)*
