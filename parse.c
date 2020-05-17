@@ -1060,6 +1060,13 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
     Token *tok = token;
     token = token->next;
 
+//  左辺が不完全型の場合は、型の大きさは右辺値によって決まる
+    if (ty->is_incomplete) {
+      ty->size = tok->cont_len;
+      ty->array_len = tok->cont_len;
+      ty->is_incomplete = false;
+    }
+
     int len = (ty->array_len < tok->cont_len) ? ty->array_len : tok->cont_len;
     for (int i = 0; i < len; i++) {
       Designator desg2 = {desg, i};
@@ -1068,7 +1075,7 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
       cur = cur->next;
     }
 
-    // 明示的に初期化されていない要素を0で埋める
+//  明示的に初期化されていない要素を0で埋める
     for (int i = len; i < ty->array_len; i++) {
       Designator desg2 = {desg, i};
       cur = lvar_init_zero(cur, var, ty->ptr_to, &desg2);
@@ -1102,10 +1109,17 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
 
     expect_end();
 
-    // 明示的に初期化されていない要素を0で埋める
+//  明示的に初期化されていない要素を0で埋める
     while (i < ty->array_len) {
       Designator desg2 = {desg, i++};
       cur = lvar_init_zero(cur, var, ty->ptr_to, &desg2);
+    }
+
+//  左辺が不完全型の場合は、型の大きさは右辺値によって決まる
+    if (ty->is_incomplete) {
+      ty->size = ty->ptr_to->size * i;
+      ty->array_len = i;
+      ty->is_incomplete = false;
     }
 
     return cur;
