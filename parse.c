@@ -1038,8 +1038,22 @@ Node *new_node_desg(Var *var, Designator *desg, Node *rhs) {
   return new_node_unary(ND_EXPR_STMT, node);
 }
 
+Node *lvar_init_zero(Node *cur, Var *var, Type *ty, Designator *desg) {
+  if (ty->kind == TY_ARRAY) {
+    for (int i = 0; i < ty->array_len; i++) {
+      Designator desg2 = {desg, i++};
+      cur = lvar_init_zero(cur, var, ty->ptr_to, &desg2);
+    }
+
+    return cur;
+  }
+
+  cur->next = new_node_desg(var, desg, new_node_num(0));
+  return cur->next;
+}
+
 // lvar-initializer2 = assign
-//                   | "{" lvar-initializer2 ("," lvar-initializer2)* ","? "}"
+//                   | "{" (lvar-initializer2 ("," lvar-initializer2)* ","?)? "}"
 Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
   if (ty->kind == TY_ARRAY) {
 // 例えば x[2][3]={{1,2,3},{4,5,6}} は下のようなブロックに変換する
@@ -1057,12 +1071,21 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
     expect("{");
     int i = 0;
 
-    do {
-      Designator desg2 = {desg, i++};
-      cur = lvar_initializer2(cur, var, ty->ptr_to, &desg2);
-    } while (!peek_end() && consume(","));
+    if (!peek("}")) {
+      do {
+        Designator desg2 = {desg, i++};
+        cur = lvar_initializer2(cur, var, ty->ptr_to, &desg2);
+      } while (!peek_end() && consume(","));
+    }
 
     expect_end();
+
+    // 明示的に初期化されていない要素を0で埋める
+    while (i < ty->array_len) {
+      Designator desg2 = {desg, i++};
+      cur = lvar_init_zero(cur, var, ty->ptr_to, &desg2);
+    }
+
     return cur;
   }
 

@@ -55,6 +55,7 @@ void gen_addr(Node *node) {
       return;
     }
     case ND_DEREF:
+      // deref対象のポインタ型変数の値をそのまま返せばいい
       gen(node->lhs);
       return;
     case ND_MEMBER:
