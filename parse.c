@@ -1055,6 +1055,28 @@ Node *lvar_init_zero(Node *cur, Var *var, Type *ty, Designator *desg) {
 // lvar-initializer2 = assign
 //                   | "{" (lvar-initializer2 ("," lvar-initializer2)* ","?)? "}"
 Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
+  if (ty->kind == TY_ARRAY && ty->ptr_to->kind == TY_CHAR && token->kind == TK_STR) {
+// 例えば char x[4]="foo" は char x[4] = {'f', 'o', 'o', '\0'} に変換する
+    Token *tok = token;
+    token = token->next;
+
+    int len = (ty->array_len < tok->cont_len) ? ty->array_len : tok->cont_len;
+    for (int i = 0; i < len; i++) {
+      Designator desg2 = {desg, i};
+      Node *rhs = new_node_num(tok->contents[i]);
+      cur->next = new_node_desg(var, &desg2, rhs);
+      cur = cur->next;
+    }
+
+    // 明示的に初期化されていない要素を0で埋める
+    for (int i = len; i < ty->array_len; i++) {
+      Designator desg2 = {desg, i};
+      cur = lvar_init_zero(cur, var, ty->ptr_to, &desg2);
+    }
+
+    return cur;
+  }
+
   if (ty->kind == TY_ARRAY) {
 // 例えば x[2][3]={{1,2,3},{4,5,6}} は下のようなブロックに変換する
 // {
