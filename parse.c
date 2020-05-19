@@ -1014,10 +1014,11 @@ Node *stmt2() {
 
 typedef struct Designator Designator;
 
-// (多次元)配列の要素を指定する構造体
+// (多次元)配列/構造体の要素を指定する構造体
 struct Designator {
   Designator *next;
-  int idx;
+  int idx; // 配列のインデックス
+  Member *mem; // 構造体のメンバ
 };
 
 // desgの表すノードを返す
@@ -1026,6 +1027,13 @@ Node *new_node_desg2(Var *var, Designator *desg) {
     return new_node_var(var);
 
   Node *node = new_node_desg2(var, desg->next);
+
+  if (desg->mem) {
+    node = new_node_unary(ND_MEMBER, node);
+    node->member = desg->mem;
+    return node;
+  }
+
   node = new_node_add(node, new_node_num(desg->idx));
 
   return new_node_unary(ND_DEREF, node);
@@ -1120,6 +1128,34 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
       ty->size = ty->ptr_to->size * i;
       ty->array_len = i;
       ty->is_incomplete = false;
+    }
+
+    return cur;
+  }
+
+  if (ty->kind == TY_STRUCT) {
+//  例えば struct { int a; int b; } x = {1, 2} は下のようなブロックに変換する
+// {
+//   x.a = 1;
+//   x.b = 2;
+// }
+    expect("{");
+    Member *mem = ty->members;
+
+    if (!peek("}")) {
+      do {
+        Designator desg2 = {desg, 0, mem};
+        cur = lvar_initializer2(cur, var, mem->ty, &desg2);
+        mem = mem->next;
+      } while (!peek_end() && consume(","));
+    }
+
+    expect_end();
+
+//  明示的に初期化されていない要素を0で埋める
+    for (; mem; mem = mem->next) {
+      Designator desg2 = {desg, 0, mem};
+      cur = lvar_init_zero(cur, var, mem->ty, &desg2);
     }
 
     return cur;
