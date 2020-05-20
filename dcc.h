@@ -52,13 +52,24 @@ struct Token {
 // 変数
 // Varという構造体で一つの変数を表すことにして、先頭の要素をlocals/globalsというポインタで持つ
 typedef struct Var Var;
+typedef struct Initializer Initializer;
 struct Var {
   char *name; // 変数の名前
   Type *ty;
   bool is_local; // ローカル変数 or グローバル変数
   int offset; // RBPからのオフセット
-  char *contents; // 変数が文字列リテラルのとき、その値(終端のnullバイト'\0'を含む)
-  int cont_len; // 変数が文字列リテラルのとき、その長さ(終端のnullバイト'\0'を含む)
+
+  Initializer *initializer; // グローバル変数の初期化値
+};
+
+// グローバル変数の初期化子
+// 連結リストで管理する
+struct Initializer {
+  Initializer *next;
+
+  int size;
+  long val;
+  char *label; // 他のグローバル変数への参照(ラベル)
 };
 
 // ローカル変数のリスト

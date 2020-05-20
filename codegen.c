@@ -604,14 +604,20 @@ void emit_data(Program *prog) {
   for (VarList *vl = prog->globals; vl; vl = vl->next) {
     Var *gvar = vl->var;
     printf("%s:\n", gvar->name);
-    if (!gvar->contents) {
+    if (!gvar->initializer) {
       // 指定したバイト数(var->ty->size)を0で埋める
       // https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
       printf("  .zero %d\n", gvar->ty->size);
       continue;
     } else {
-      for (int i = 0; i < gvar->cont_len; i++) {
-        printf("  .byte %d\n", gvar->contents[i]);
+      for (Initializer *init = gvar->initializer; init; init = init->next) {
+        if (init->label)
+          // 他のグローバル変数への参照
+          printf("  .quad %s\n", init->label);
+        else if (init->size == 1)
+          printf("  .byte %ld\n", init->val);
+        else
+          printf("  .%dbyte %ld\n", init->size, init->val);
       }
     }
   }

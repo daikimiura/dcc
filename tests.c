@@ -8,8 +8,16 @@ int exit();
 
 void void_func();
 
+int strcmp(char *p, char *q);
+
 int g1;
 int g2[4];
+char g3 = 3;
+short g4 = 4;
+int g5 = 5;
+long g6 = 6;
+int *g7 = &g5;
+char *g8 = "abc";
 
 typedef int MyInt;
 
@@ -1815,6 +1823,12 @@ int main() {
     x.b;
   }), "struct {int a; int b;} x={}; x.b;");
 
+  assert(3, g3, "g3");
+  assert(4, g4, "g4");
+  assert(5, g5, "g5");
+  assert(6, g6, "g6");
+  assert(5, *g7, "*g7");
+  assert(0, strcmp(g8, "abc"), "strcmp(g8, \"abc\")");
 
   printf("OK\n");
   return 0;

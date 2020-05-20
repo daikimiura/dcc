@@ -49,6 +49,8 @@ Node *expr();
 
 long const_expr();
 
+long eval(Node *node);
+
 Node *assign();
 
 Node *conditional();
@@ -482,19 +484,75 @@ Program *program() {
   return prog;
 }
 
-// global-var = basetype declarator ("[" num "]")* ";"
+Initializer *gvar_init_label(Initializer *cur, char *label) {
+  Initializer *init = calloc(1, sizeof(Initializer));
+  init->label = label;
+  cur->next = init;
+  return init;
+}
+
+Initializer *gvar_init_val(Initializer *cur, int size, int val) {
+  Initializer *init = calloc(1, sizeof(Initializer));
+  init->size = size;
+  init->val = val;
+  cur->next = init;
+  return init;
+}
+
+Initializer *gvar_init_string(char *p, int len) {
+  Initializer head = {};
+  Initializer *cur = &head;
+
+  for (int i = 0; i < len; i++)
+    cur = gvar_init_val(cur, 1, p[i]);
+
+  return head.next;
+}
+
+// gvar-initializer2 = assign
+Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
+  // 右辺値
+  Node *expr = conditional();
+
+  //  int *g7 = &g5;　のような場合
+  if (expr->kind == ND_ADDR)
+    return gvar_init_label(cur, expr->lhs->var->name);
+
+  if (expr->kind == ND_VAR && expr->var->ty->kind == TY_ARRAY)
+    return gvar_init_label(cur, expr->var->name);
+
+  return gvar_init_val(cur, ty->size, eval(expr));
+}
+
+Initializer *gvar_initializer(Type *ty) {
+  Initializer head = {};
+  gvar_initializer2(&head, ty);
+  return head.next;
+}
+
+// global-var = basetype declarator type-suffix ("=" gvar-initializer)? ";"
 void global_var() {
   StorageClass sclass;
   Type *ty = basetype(&sclass);
   char *name = NULL;
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
-  expect(";");
 
-  if (sclass == TYPEDEF)
+  if (sclass == TYPEDEF) {
+    expect(";");
     push_var_scope(name)->type_def = ty;
-  else
-    new_gvar(name, ty, true);
+    return;
+  }
+
+  Var *var = new_gvar(name, ty, true);
+
+  if (!consume("=")) {
+    expect(";");
+    return;
+  }
+
+  var->initializer = gvar_initializer(ty);
+  expect(";");
 }
 
 // function = basetype declarator "(" params? ")" ("{" stmt* "}" | ";")
@@ -1636,8 +1694,7 @@ Node *primary() {
 
     Type *ty = array_of(char_type, tok->cont_len);
     Var *var = new_gvar(new_label(), ty, true);
-    var->contents = tok->contents;
-    var->cont_len = tok->cont_len;
+    var->initializer = gvar_init_string(tok->contents, tok->cont_len);
     return new_node_var(var);
   }
 
