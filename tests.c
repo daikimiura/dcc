@@ -10,6 +10,8 @@ void void_func();
 
 int strcmp(char *p, char *q);
 
+int memcmp(char *p, char *q);
+
 int g1;
 int g2[4];
 char g3 = 3;
@@ -36,6 +38,9 @@ struct {
 } g14[2] = {1, 2, 3, 4};
 char *g15 = {"foo"};
 char g16[][4] = {'f', 'o', 'o', 0, 'b', 'a', 'r', 0};
+char g17[] = "foobar";
+char g18[10] = "foobar";
+char g19[3] = "foobar";
 
 typedef int MyInt;
 
@@ -1904,6 +1909,14 @@ int main() {
   assert(0, strcmp(g15, "foo"), "strcmp(g15, \"foo\")");
   assert(0, strcmp(g16[0], "foo"), "strcmp(g16[0], \"foo\")");
   assert(0, strcmp(g16[1], "bar"), "strcmp(g16[1], \"bar\")");
+
+  assert(7, sizeof(g17), "sizeof(g17)");
+  assert(10, sizeof(g18), "sizeof(g18)");
+  assert(3, sizeof(g19), "sizeof(g19)");
+
+  assert(0, memcmp(g17, "foobar", 7), "memcmp(g17, \"foobar\", 7)");
+  assert(0, memcmp(g18, "foobar\0\0\0", 10), "memcmp(g18, \"foobar\\0\\0\\0\", 10)");
+  assert(0, memcmp(g19, "foo", 3), "memcmp(g19, \"foo\", 3)");
 
   printf("OK\n");
   return 0;

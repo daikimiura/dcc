@@ -529,6 +529,30 @@ Initializer *emit_global_struct_padding(Initializer *cur, Type *parent, Member *
 // gvar-initializer2 = assign
 //　　　　　　　　　　　| "{" (gvar-initializer2 ("," gvar-initializer2)* ","?)?) "}"
 Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
+  if (ty->kind == TY_ARRAY && ty->ptr_to->kind == TY_CHAR && token->kind == TK_STR) {
+    // 文字列のグローバル変数の初期化
+    Token *tok = token;
+    token = token->next;
+    if (ty->is_incomplete) {
+      ty->size = tok->cont_len;
+      ty->array_len = tok->cont_len;
+      ty->is_incomplete = false;
+    }
+
+    // ty->array_len と token->cont_len の小さい方を採用
+    // ex.)
+    // char g18[10] = "foobar"; // => len は 6
+    //char g19[3] = "foobar";　// => len は 3
+    int len = (ty->array_len < tok->cont_len) ? ty->array_len : tok->cont_len;
+
+    for (int i = 0; i < len; i++)
+      cur = gvar_init_val(cur, 1, tok->contents[i]);
+
+    // 明示的に初期化されてない分を0で初期化
+    return gvar_init_zero(cur, ty->array_len - len);
+  }
+
+
   if (ty->kind == TY_ARRAY) {
     // 配列のグローバル変数の初期化
 
