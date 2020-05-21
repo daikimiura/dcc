@@ -87,6 +87,10 @@ Node *primary();
 
 void global_var();
 
+bool peek_end();
+
+void expect_end();
+
 // ブロックスコープの開始
 Scope *enter_scope() {
   Scope *sc = calloc(1, sizeof(Scope));
@@ -509,15 +513,77 @@ Initializer *gvar_init_string(char *p, int len) {
   return head.next;
 }
 
+Initializer *gvar_init_zero(Initializer *cur, int nbytes) {
+  for (int i = 0; i < nbytes; i++)
+    cur = gvar_init_val(cur, 1, 0);
+  return cur;
+}
+
+Initializer *emit_global_struct_padding(Initializer *cur, Type *parent, Member *mem) {
+  int start = mem->offset + mem->ty->size;
+  int end = mem->next ? mem->next->offset : parent->size;
+
+  return gvar_init_zero(cur, end - start);
+}
+
 // gvar-initializer2 = assign
+//　　　　　　　　　　　| "{" (gvar-initializer2 ("," gvar-initializer2)* ","?)?) "}"
 Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
+  if (ty->kind == TY_ARRAY) {
+    // 配列のグローバル変数の初期化
+    expect("{");
+    int i = 0;
+
+    if (!peek("}")) {
+      do {
+        cur = gvar_initializer2(cur, ty->ptr_to);
+        i++;
+      } while (!peek_end() && consume(","));
+    }
+
+    expect_end();
+
+    // 明示的に初期化されてない分を0で初期化
+    if (i < ty->array_len)
+      cur = gvar_init_zero(cur, ty->ptr_to->size * (ty->array_len - i));
+
+    if (ty->is_incomplete) {
+      ty->size = ty->ptr_to->size * i;
+      ty->array_len = i;
+      ty->is_incomplete = false;
+    }
+    return cur;
+  }
+
+  if (ty->kind == TY_STRUCT) {
+    expect("{");
+    Member *mem = ty->members;
+
+    if (!peek("}")) {
+      do {
+        cur = gvar_initializer2(cur, mem->ty);
+        cur = emit_global_struct_padding(cur, ty, mem);
+        mem = mem->next;
+      } while (!peek_end() && consume(","));
+    }
+    expect_end();
+
+    // 明示的に初期化されてないメンバを0で初期化
+    if (mem)
+      cur = gvar_init_zero(cur, ty->size - mem->offset);
+
+    return cur;
+  }
+
+
   // 右辺値
   Node *expr = conditional();
 
-  //  int *g7 = &g5;　のような場合
+  //  int *g1 = &g2;　のような場合
   if (expr->kind == ND_ADDR)
     return gvar_init_label(cur, expr->lhs->var->name);
 
+  //  int *g1 = g2 (g2は配列);　のような場合
   if (expr->kind == ND_VAR && expr->var->ty->kind == TY_ARRAY)
     return gvar_init_label(cur, expr->var->name);
 
