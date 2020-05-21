@@ -531,21 +531,24 @@ Initializer *emit_global_struct_padding(Initializer *cur, Type *parent, Member *
 Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
   if (ty->kind == TY_ARRAY) {
     // 配列のグローバル変数の初期化
-    expect("{");
+
+    // `{}`付きかどうか
+    bool open = consume("{");
     int i = 0;
+    int limit = ty->is_incomplete ? INT_MAX : ty->array_len;
 
     if (!peek("}")) {
       do {
         cur = gvar_initializer2(cur, ty->ptr_to);
         i++;
-      } while (!peek_end() && consume(","));
+      } while (i < limit && !peek_end() && consume(","));
     }
 
-    expect_end();
+    if (open)
+      expect_end();
 
     // 明示的に初期化されてない分を0で初期化
-    if (i < ty->array_len)
-      cur = gvar_init_zero(cur, ty->ptr_to->size * (ty->array_len - i));
+    cur = gvar_init_zero(cur, ty->ptr_to->size * (ty->array_len - i));
 
     if (ty->is_incomplete) {
       ty->size = ty->ptr_to->size * i;
@@ -556,7 +559,7 @@ Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
   }
 
   if (ty->kind == TY_STRUCT) {
-    expect("{");
+    bool open = consume("{");
     Member *mem = ty->members;
 
     if (!peek("}")) {
@@ -564,9 +567,11 @@ Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
         cur = gvar_initializer2(cur, mem->ty);
         cur = emit_global_struct_padding(cur, ty, mem);
         mem = mem->next;
-      } while (!peek_end() && consume(","));
+      } while (mem && !peek_end() && consume(","));
     }
-    expect_end();
+
+    if (open)
+      expect_end();
 
     // 明示的に初期化されてないメンバを0で初期化
     if (mem)
@@ -575,9 +580,11 @@ Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
     return cur;
   }
 
-
+  bool open = consume("{");
   // 右辺値
   Node *expr = conditional();
+  if (open)
+    expect_end();
 
   //  int *g1 = &g2;　のような場合
   if (expr->kind == ND_ADDR)
@@ -1229,17 +1236,19 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
 //
 // 配列の初期化について、詳しくはここ↓
 // https://drive.google.com/file/d/1LIn5ikBwvs4RjMD65ilLeKhHB7BaHPMg/view?usp=sharing
-    expect("{");
+    bool open = consume("{");
     int i = 0;
+    int limit = ty->is_incomplete ? INT_MAX : ty->array_len;
 
     if (!peek("}")) {
       do {
         Designator desg2 = {desg, i++};
         cur = lvar_initializer2(cur, var, ty->ptr_to, &desg2);
-      } while (!peek_end() && consume(","));
+      } while (i < limit && !peek_end() && consume(","));
     }
 
-    expect_end();
+    if (open)
+      expect_end();
 
 //  明示的に初期化されていない要素を0で埋める
     while (i < ty->array_len) {
@@ -1263,7 +1272,7 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
 //   x.a = 1;
 //   x.b = 2;
 // }
-    expect("{");
+    bool open = consume("{");
     Member *mem = ty->members;
 
     if (!peek("}")) {
@@ -1271,10 +1280,11 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
         Designator desg2 = {desg, 0, mem};
         cur = lvar_initializer2(cur, var, mem->ty, &desg2);
         mem = mem->next;
-      } while (!peek_end() && consume(","));
+      } while (mem && !peek_end() && consume(","));
     }
 
-    expect_end();
+    if (open)
+      expect_end();
 
 //  明示的に初期化されていない要素を0で埋める
     for (; mem; mem = mem->next) {
@@ -1285,7 +1295,10 @@ Node *lvar_initializer2(Node *cur, Var *var, Type *ty, Designator *desg) {
     return cur;
   }
 
+  bool open = consume("{");
   cur->next = new_node_desg(var, desg, assign());
+  if (open)
+    expect_end();
   return cur->next;
 }
 
