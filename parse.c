@@ -51,6 +51,8 @@ long const_expr();
 
 long eval(Node *node);
 
+long eval2(Node *node, Var **var);
+
 Node *assign();
 
 Node *conditional();
@@ -488,9 +490,10 @@ Program *program() {
   return prog;
 }
 
-Initializer *gvar_init_label(Initializer *cur, char *label) {
+Initializer *gvar_init_label(Initializer *cur, char *label, long addend) {
   Initializer *init = calloc(1, sizeof(Initializer));
   init->label = label;
+  init->addend = addend;
   cur->next = init;
   return init;
 }
@@ -528,6 +531,7 @@ Initializer *emit_global_struct_padding(Initializer *cur, Type *parent, Member *
 
 // gvar-initializer2 = assign
 //　　　　　　　　　　　| "{" (gvar-initializer2 ("," gvar-initializer2)* ","?)?) "}"
+// グローバル変数としては数値リテラルや文字列リテラルのような定数か、他のグローバル変数のアドレス( + 加数)のみが代入可能
 Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
   if (ty->kind == TY_ARRAY && ty->ptr_to->kind == TY_CHAR && token->kind == TK_STR) {
     // 文字列のグローバル変数の初期化
@@ -610,15 +614,16 @@ Initializer *gvar_initializer2(Initializer *cur, Type *ty) {
   if (open)
     expect_end();
 
-  //  int *g1 = &g2;　のような場合
-  if (expr->kind == ND_ADDR)
-    return gvar_init_label(cur, expr->lhs->var->name);
+  Var *var = NULL;
+  long addend = eval2(expr, &var);
 
-  //  int *g1 = g2 (g2は配列);　のような場合
-  if (expr->kind == ND_VAR && expr->var->ty->kind == TY_ARRAY)
-    return gvar_init_label(cur, expr->var->name);
+  //  int *g1 = &g2; や int *g1 = &g2 + 1; のような場合
+  if (var) {
+    int scale = (var->ty->kind == TY_ARRAY) ? var->ty->ptr_to->size : var->ty->size;
+    return gvar_init_label(cur, var->name, addend * scale);
+  }
 
-  return gvar_init_val(cur, ty->size, eval(expr));
+  return gvar_init_val(cur, ty->size, addend);
 }
 
 Initializer *gvar_initializer(Type *ty) {
@@ -1432,13 +1437,27 @@ Node *conditional() {
   return ternary;
 }
 
-// nodeを定数式として評価する
 long eval(Node *node) {
+  return eval2(node, NULL);
+}
+
+// nodeを定数式として評価する
+// 定数式は以下の2通りのどちらか
+// - 数値
+// - グローバル変数へのポインタ +/- 数値
+// 後者はグローバル変数の初期化においてのみ有効
+long eval2(Node *node, Var **var) {
   switch (node->kind) {
     case ND_ADD:
       return eval(node->lhs) + eval(node->rhs);
+    case ND_PTR_ADD:
+      return eval2(node->lhs, var) + eval(node->rhs);
     case ND_SUB:
       return eval(node->lhs) - eval(node->rhs);
+    case ND_PTR_SUB:
+      return eval2(node->lhs, var) - eval(node->rhs);
+    case ND_PTR_DIFF:
+      return eval2(node->lhs, var) - eval2(node->lhs, var);
     case ND_MUL:
       return eval(node->lhs) * eval(node->rhs);
     case ND_DIV:
@@ -1475,6 +1494,16 @@ long eval(Node *node) {
       return eval(node->lhs) || eval(node->rhs);
     case ND_NUM:
       return node->val;
+    case ND_ADDR:
+      if (!var || *var || node->lhs->kind != ND_VAR)
+        error_at(token->str, "無効な初期化式です");
+      *var = node->lhs->var;
+      return 0;
+    case ND_VAR:
+      if (!var || *var || node->var->ty->kind != TY_ARRAY)
+        error_at(token->str, "無効な初期化式です");
+      *var = node->var;
+      return 0;
     default:
       error_at(token->str, "定数式ではありません");
   }

@@ -612,7 +612,7 @@ void emit_data(Program *prog) {
       for (Initializer *init = gvar->initializer; init; init = init->next) {
         if (init->label)
           // 他のグローバル変数への参照
-          printf("  .quad %s\n", init->label);
+          printf("  .quad %s%+ld\n", init->label, init->addend);
         else if (init->size == 1)
           printf("  .byte %ld\n", init->val);
         else

@@ -71,6 +71,7 @@ struct Initializer {
   int size;
   long val;
   char *label; // 他のグローバル変数への参照(ラベル)
+  long addend; // 加数
 };
 
 // ローカル変数のリスト
