@@ -6,7 +6,7 @@ int printf();
 
 int exit();
 
-void void_func();
+void void_func(void);
 
 int strcmp(char *p, char *q);
 
