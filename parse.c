@@ -1790,6 +1790,7 @@ Node *stmt_expr_tail() {
 //         | "(" expr ")"
 //         | "sizeof" "(" type-name ")"
 //         | "sizeof" unary
+//         | "_Alignof" "(" type-name ")"
 //         | ident func-args?
 //         | str
 //         | num
@@ -1818,6 +1819,13 @@ Node *primary() {
     Node *node = unary();
     add_type(node);
     return new_node_num(node->ty->size);
+  }
+
+  if (consume("_Alignof")) {
+    expect("(");
+    Type *ty = type_name();
+    expect(")");
+    return new_node_num(ty->align);
   }
 
   if ((tok = consume_ident())) {
