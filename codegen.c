@@ -598,26 +598,37 @@ void gen(Node *node) {
 // データ(.data)セクションの内容を出力する
 // https://qiita.com/MoriokaReimen/items/b320e6cc82c8873a602f
 void emit_data(Program *prog) {
-  printf(".data\n");
+  // 初期化されていないグローバル変数はbss領域に格納
+  printf(".bss\n");
 
   for (VarList *vl = prog->globals; vl; vl = vl->next) {
     Var *gvar = vl->var;
-    printf("%s:\n", gvar->name);
-    if (!gvar->initializer) {
-      // 指定したバイト数(var->ty->size)を0で埋める
-      // https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
-      printf("  .zero %d\n", gvar->ty->size);
+
+    if (gvar->initializer)
       continue;
-    } else {
-      for (Initializer *init = gvar->initializer; init; init = init->next) {
-        if (init->label)
-          // 他のグローバル変数への参照
-          printf("  .quad %s%+ld\n", init->label, init->addend);
-        else if (init->size == 1)
-          printf("  .byte %ld\n", init->val);
-        else
-          printf("  .%dbyte %ld\n", init->size, init->val);
-      }
+    printf("%s:\n", gvar->name);
+    // 指定したバイト数(var->ty->size)を0で埋める
+    // https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
+    printf("  .zero %d\n", gvar->ty->size);
+  }
+
+  // 初期化されているグローバル変数はdata領域に格納
+  printf(".data\n");
+  for (VarList *vl = prog->globals; vl; vl = vl->next) {
+    Var *gvar = vl->var;
+
+    if (!gvar->initializer)
+      continue;
+    printf("%s:\n", gvar->name);
+
+    for (Initializer *init = gvar->initializer; init; init = init->next) {
+      if (init->label)
+        // 他のグローバル変数への参照
+        printf("  .quad %s%+ld\n", init->label, init->addend);
+      else if (init->size == 1)
+        printf("  .byte %ld\n", init->val);
+      else
+        printf("  .%dbyte %ld\n", init->size, init->val);
     }
   }
 }
