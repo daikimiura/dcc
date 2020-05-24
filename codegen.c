@@ -47,8 +47,11 @@ void gen_addr(Node *node) {
         printf("  sub rax, %d\n", node->var->offset);
         printf("  push rax\n");
       } else {
-        // https://kawasin73.hatenablog.com/entry/2019/01/05/183917
-        printf("  push [%s@GOTPCREL + rip]\n", var->name);
+        if (var->is_extern)
+          printf("  push [_%s@GOTPCREL + rip]\n", var->name);
+        else
+          // https://kawasin73.hatenablog.com/entry/2019/01/05/183917
+          printf("  push [%s@GOTPCREL + rip]\n", var->name);
       }
 
       return;

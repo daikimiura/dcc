@@ -58,6 +58,7 @@ struct Var {
   char *name; // 変数の名前
   Type *ty;
   bool is_local; // ローカル変数 or グローバル変数
+  bool is_extern;
   int offset; // RBPからのオフセット
 
   Initializer *initializer; // グローバル変数の初期化値

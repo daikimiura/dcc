@@ -16,6 +16,7 @@ static Node *current_switch = NULL;
 typedef enum {
   TYPEDEF = 1 << 0,
   STATIC = 1 << 1,
+  EXTERN = 1 << 2,
 } StorageClass;
 
 // 非終端記号を表す関数のプロトタイプ宣言
@@ -446,7 +447,7 @@ VarList *read_func_params() {
 
 bool is_typename() {
   return peek("char") || peek("int") || peek("short") || peek("long") || peek("enum") || peek("static") ||
-         peek("struct") || peek("void") || peek("_Bool") || peek("typedef") || find_typedef(token);
+         peek("struct") || peek("void") || peek("_Bool") || peek("typedef") || peek("extern") || find_typedef(token);
 }
 
 // program() が function() かどうか判定する
@@ -651,14 +652,21 @@ void global_var() {
     return;
   }
 
-  Var *var = new_gvar(name, ty, true);
+  // externの場合、このファイルでは宣言
+  Var *var = new_gvar(name, ty, sclass != EXTERN);
 
-  if (!consume("=")) {
+  if (sclass == EXTERN) {
+    var->is_extern = true;
     expect(";");
     return;
   }
 
-  var->initializer = gvar_initializer(ty);
+  if (consume("=")) {
+    var->initializer = gvar_initializer(ty);
+    expect(";");
+    return;
+  }
+
   expect(";");
 }
 
@@ -884,7 +892,7 @@ Type *basetype(StorageClass *sclass) {
     *sclass = 0;
 
   while (is_typename()) {
-    if (peek("typedef") || peek("static")) {
+    if (peek("typedef") || peek("static") || peek("extern")) {
       if (!sclass)
         error_at(token->str, "ストレージクラス指定子はここでは使えません");
 
@@ -892,9 +900,11 @@ Type *basetype(StorageClass *sclass) {
         *sclass |= TYPEDEF;
       else if (consume("static"))
         *sclass |= STATIC;
+      else if (consume("extern"))
+        *sclass |= EXTERN;
 
-      if (*sclass == (TYPEDEF | STATIC))
-        error_at(token->str, "typedefとstaticは一緒に使えません");
+      if (*sclass & (*sclass - 1))
+        error_at(token->str, "typedef,static,externは一緒に使えません");
       continue;
     }
 

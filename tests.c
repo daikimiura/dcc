@@ -42,6 +42,9 @@ char g17[] = "foobar";
 char g18[10] = "foobar";
 char g19[3] = "foobar";
 
+extern int ext1;
+extern int *ext2;
+
 typedef int MyInt;
 
 int assert(long expected, long actual, char *code) {
@@ -1917,6 +1920,12 @@ int main() {
   assert(0, memcmp(g17, "foobar", 7), "memcmp(g17, \"foobar\", 7)");
   assert(0, memcmp(g18, "foobar\0\0\0", 10), "memcmp(g18, \"foobar\\0\\0\\0\", 10)");
   assert(0, memcmp(g19, "foo", 3), "memcmp(g19, \"foo\", 3)");
+
+  ext1 = 5;
+  assert(5, ext1, "ext1");
+
+  ext2 = &ext1;
+  assert(5, *ext2, "*ext2");
 
   printf("OK\n");
   return 0;

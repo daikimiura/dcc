@@ -9,7 +9,7 @@ $(OBJS): dcc.h
 
 test: dcc
 	./dcc tests.c > tmp.s
-	echo 'int static_fn() {return 5;}' | gcc -xc -c -o tmp2.o -
+	echo 'int ext1; int *ext2; int static_fn() {return 5;}' | gcc -xc -c -o tmp2.o -
 	gcc -o tmp tmp.s tmp2.o
 	./tmp
 
