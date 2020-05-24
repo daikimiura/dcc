@@ -606,6 +606,8 @@ void emit_data(Program *prog) {
 
     if (gvar->initializer)
       continue;
+
+    printf(".align %d\n", gvar->ty->align);
     printf("%s:\n", gvar->name);
     // 指定したバイト数(var->ty->size)を0で埋める
     // https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
@@ -619,6 +621,7 @@ void emit_data(Program *prog) {
 
     if (!gvar->initializer)
       continue;
+    printf(".align %d\n", gvar->ty->align);
     printf("%s:\n", gvar->name);
 
     for (Initializer *init = gvar->initializer; init; init = init->next) {
