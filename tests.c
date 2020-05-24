@@ -47,6 +47,12 @@ extern int *ext2;
 
 typedef int MyInt;
 
+int;
+struct {
+  char a;
+  int b;
+};
+
 int assert(long expected, long actual, char *code) {
   if (expected == actual) {
     printf("%s => %ld\n", code, actual);

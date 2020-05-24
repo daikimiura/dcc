@@ -453,15 +453,20 @@ bool is_typename() {
 // program() が function() かどうか判定する
 bool is_function() {
   Token *tok = token;
+  bool is_func = false;
 
   // tokenを先読みして判定
   // basetype declarator ( ... ならfunc
   StorageClass sclass;
   Type *ty = basetype(&sclass);
-  char *name = NULL;
-  declarator(ty, &name);
-  bool is_func = name && consume("(");
+  // 型名だけの宣言の場合もある(トップレベルにおいてのみ許可される)
+  if (!consume(";")) {
+    char *name = NULL;
+    declarator(ty, &name);
+    is_func = name && consume("(");
+  }
   token = tok;
+
   return is_func;
 };
 
@@ -642,6 +647,9 @@ Initializer *gvar_initializer(Type *ty) {
 void global_var() {
   StorageClass sclass;
   Type *ty = basetype(&sclass);
+  if (consume(";"))
+    return;
+
   char *name = NULL;
   ty = declarator(ty, &name);
   ty = type_suffix(ty);
