@@ -1042,6 +1042,7 @@ Node *stmt(void) {
 //      | "case" const-expr ":" stmt
 //      | "default" num ":" stmt
 //      | declaration
+//      | ";"
 Node *stmt2() {
   if (consume("return")) {
     Node *node = new_node_return(expr());
@@ -1175,6 +1176,9 @@ Node *stmt2() {
     current_switch->default_case = node;
     return node;
   }
+
+  if (consume(";"))
+    return new_node_null();
 
   Token *tok;
   if ((tok = consume_ident())) {
