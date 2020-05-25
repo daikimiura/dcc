@@ -1385,6 +1385,20 @@ Node *declaration() {
     return new_node_null();
   }
 
+  if (sclass == STATIC) {
+    // staticなローカル変数はグローバル変数と同じように扱う
+    Var *var = new_gvar(new_label(), ty, true);
+    push_var_scope(name)->var = var;
+
+    if (consume("="))
+      var->initializer = gvar_initializer(ty);
+    else if (ty->is_incomplete)
+      error_at(token->str, "不完全な型です");
+    consume(";");
+
+    return new_node_null();
+  }
+
   Var *lvar = new_lvar(name, ty);
 
   if (consume(";"))
@@ -1522,7 +1536,7 @@ long eval2(Node *node, Var **var) {
     case ND_NUM:
       return node->val;
     case ND_ADDR:
-      if (!var || *var || node->lhs->kind != ND_VAR)
+      if (!var || *var || node->lhs->kind != ND_VAR || node->lhs->var->is_local)
         error_at(token->str, "無効な初期化式です");
       *var = node->lhs->var;
       return 0;

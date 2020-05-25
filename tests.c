@@ -109,6 +109,12 @@ static int static_fn() { return 3; }
 
 int param_decay(int x[]) { return x[0]; }
 
+int counter() {
+  static int i;
+  static int j = 1 + 1;
+  return i++ + j++;
+}
+
 int main() {
   assert(0, 0, "0");
   assert(42, 42, "42");
@@ -1951,6 +1957,9 @@ int main() {
     long b;
   }[2]), "_Alignof(struct {char a; long b;}[2])");
 
+  assert(2, counter(), "counter()"); // 0 + 2
+  assert(4, counter(), "counter()"); // 1 + 3
+  assert(6, counter(), "counter()"); // 2 + 4
 
   printf("OK\n");
   return 0;
