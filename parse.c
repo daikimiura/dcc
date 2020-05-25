@@ -1030,7 +1030,7 @@ Node *stmt(void) {
   return node;
 }
 
-// stmt = "return" expr ";"
+// stmt = "return" expr? ";"
 //      | "if" "(" expr ")" stmt ( "else" stmt )?
 //      | "while" "(" expr ")" stmt
 //      | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
@@ -1047,6 +1047,9 @@ Node *stmt(void) {
 //      | ";"
 Node *stmt2() {
   if (consume("return")) {
+    if (consume(";"))
+      return new_node(ND_RETURN, NULL, NULL);
+
     Node *node = new_node_return(expr());
     expect(";");
     return node;

@@ -132,6 +132,10 @@ int counter() {
   return i++ + j++;
 }
 
+void ret_none() {
+  return;
+}
+
 int main() {
   assert(0, 0, "0");
   assert(42, 42, "42");
@@ -1994,6 +1998,7 @@ int main() {
   assert(3, tree->lhs->lhs->val, "tree->lhs->lhs->val");
   assert(4, tree->lhs->rhs->val, "tree->lhs->rhs->val");
 
+  ret_none();
 
   printf("OK\n");
   return 0;
