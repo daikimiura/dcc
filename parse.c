@@ -86,6 +86,8 @@ Node *unary();
 
 Node *postfix();
 
+Node *compound_literal();
+
 Node *primary();
 
 void global_var();
@@ -1678,10 +1680,13 @@ Node *cast() {
     if (is_typename()) {
       Type *ty = type_name();
       expect(")");
-      Node *node = new_node_unary(ND_CAST, cast());
-      add_type(node->lhs);
-      node->ty = ty;
-      return node;
+
+      if (!consume("{")) { // 複合リテラルではないか確認
+        Node *node = new_node_unary(ND_CAST, cast());
+        add_type(node->lhs);
+        node->ty = ty;
+        return node;
+      }
     }
 
     // 型キャストの`(`じゃなかったらtokenを元に戻す
@@ -1739,9 +1744,14 @@ Node *struct_ref(Node *lhs) {
   return node;
 }
 
-// postfix = primary ("[" expr "]" | "." ident | "->" ident | "++" | "--")*
+// postfix = compound-literal
+//         | primary ("[" expr "]" | "." ident | "->" ident | "++" | "--")*
 Node *postfix() {
-  Node *node = primary();
+  Node *node = compound_literal();
+  if (node)
+    return node;
+
+  node = primary();
 
   for (;;) {
     if (consume("[")) {
@@ -1776,6 +1786,39 @@ Node *postfix() {
 
     return node;
   }
+}
+
+// compound-literal = "(" type-name ")" "{" (gvar-initializer | lvar-initializer) "}"
+Node *compound_literal() {
+  Token *tok = token;
+
+  if (!consume("(") || !is_typename()) {
+    token = tok;
+    // postfix() 内で、まずcompound-literalでパーズしてみて、パーズできなかったらprimaryでパーズするという処理になっているので
+    // ここではerrorをraiseしない
+    // (errorをraiseするとexitしてしまいprimaryのパーズまで到達しない)
+    return NULL;
+  }
+
+  Type *ty = type_name();
+  expect(")");
+
+  if (!peek("{")) {
+    token = tok;
+    return NULL;
+  }
+
+  if (scope_depth == 0) {
+    // 適当な名前でグローバル変数を追加
+    Var *var = new_gvar(new_label(), ty, true);
+    var->initializer = gvar_initializer(ty);
+    return new_node_var(var);
+  }
+
+  Var *var = new_lvar(new_label(), ty);
+  Node *node = new_node_var(var);
+  node->init = lvar_initializer(var);
+  return node;
 }
 
 // stmt-expr = "(" "{" stmt stmt* "}" ")"

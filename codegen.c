@@ -40,6 +40,10 @@ static char *argreg1[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 void gen_addr(Node *node) {
   switch (node->kind) {
     case ND_VAR: {
+      // 複合リテラルの場合
+      if (node->init)
+        gen(node->init);
+
       Var *var = node->var;
 
       if (var->is_local) {
@@ -286,6 +290,13 @@ void gen(Node *node) {
       printf("  jmp .L.return.%s\n", funcname);
       return;
     case ND_VAR:
+      // 複合リテラルの場合
+      if (node->init)
+        gen(node->init);
+      gen_addr(node);
+      if (node->ty->kind != TY_ARRAY)
+        load(node->ty);
+      return;
     case ND_MEMBER:
       gen_addr(node);
       if (node->ty->kind != TY_ARRAY)
