@@ -354,8 +354,9 @@ Var *new_lvar(char *name, Type *ty) {
 
 // 新しいグローバル変数 or 関数の名前と戻り値の型 をスコープに追加する
 // もしemitがtrueならグローバル変数を管理する連結リスト(globals)の先頭にも追加する
-Var *new_gvar(char *name, Type *ty, bool emit) {
+Var *new_gvar(char *name, Type *ty, bool is_static, bool emit) {
   Var *gvar = new_var(name, ty, false);
+  gvar->is_static = is_static;
   push_var_scope(name)->var = gvar;
 
   if (emit) {
@@ -662,8 +663,8 @@ void global_var() {
     return;
   }
 
-  // externの場合、このファイルでは宣言
-  Var *var = new_gvar(name, ty, sclass != EXTERN);
+  // externの場合、現在コンパイル対象のファイルではemitしない
+  Var *var = new_gvar(name, ty, sclass == STATIC, sclass != EXTERN);
 
   if (sclass == EXTERN) {
     var->is_extern = true;
@@ -692,7 +693,7 @@ Function *function() {
   ty = declarator(ty, &name);
 
   // 関数の名前と戻り値の型をスコープに追加する
-  new_gvar(name, func_type(ty), false);
+  new_gvar(name, func_type(ty), false, false);
 
   Function *fn = calloc(1, sizeof(Function));
   fn->name = name;
@@ -1391,8 +1392,8 @@ Node *declaration() {
   }
 
   if (sclass == STATIC) {
-    // staticなローカル変数はグローバル変数と同じように扱う
-    Var *var = new_gvar(new_label(), ty, true);
+    // staticなローカル変数はstaticなグローバル変数と同じように扱う
+    Var *var = new_gvar(new_label(), ty, true, true);
     push_var_scope(name)->var = var;
 
     if (consume("="))
@@ -1813,7 +1814,7 @@ Node *compound_literal() {
 
   if (scope_depth == 0) {
     // 適当な名前でグローバル変数を追加
-    Var *var = new_gvar(new_label(), ty, true);
+    Var *var = new_gvar(new_label(), ty, true, true);
     var->initializer = gvar_initializer(ty);
     return new_node_var(var);
   }
@@ -1920,7 +1921,7 @@ Node *primary() {
     token = token->next;
 
     Type *ty = array_of(char_type, tok->cont_len);
-    Var *var = new_gvar(new_label(), ty, true);
+    Var *var = new_gvar(new_label(), ty, true, true);
     var->initializer = gvar_init_string(tok->contents, tok->cont_len);
     return new_node_var(var);
   }

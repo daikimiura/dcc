@@ -614,6 +614,11 @@ void gen(Node *node) {
 // データ(.data)セクションの内容を出力する
 // https://qiita.com/MoriokaReimen/items/b320e6cc82c8873a602f
 void emit_data(Program *prog) {
+  for (VarList *vl = prog->globals; vl; vl = vl->next) {
+    if (!vl->var->is_static)
+      printf(".global %s\n", vl->var->name);
+  }
+
   // 初期化されていないグローバル変数はbss領域に格納
   printf(".bss\n");
 

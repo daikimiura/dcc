@@ -44,6 +44,7 @@ char g19[3] = "foobar";
 
 extern int ext1;
 extern int *ext2;
+static int ext3 = 3;
 
 typedef int MyInt;
 
@@ -1999,6 +2000,8 @@ int main() {
   assert(4, tree->lhs->rhs->val, "tree->lhs->rhs->val");
 
   ret_none();
+
+  assert(3, ext3, "ext3");
 
   printf("OK\n");
   return 0;
