@@ -1,9 +1,11 @@
+////
+//// Created by 三浦大輝 on 2020/04/24.
+////
 //
-// Created by 三浦大輝 on 2020/04/24.
-//
-
+//// -*- c -*-
 int printf();
 
+//
 int exit();
 
 void void_func(void);
@@ -815,7 +817,7 @@ int main() {
       int x;
     };
     int st_x = 1;
-    struct my_struct y;
+    struct st_x y;
     y.x = 2;
     st_x + y.x;
   }), "struct my_struct {int x;}; int t=1; struct t y; y.x=2; t+y.x;");
@@ -863,6 +865,15 @@ int main() {
     x.a = 2;
     x.a;
   }), "typedef struct {int a;} t; { typedef int t; } t x; x.a=2; x.a;");
+  assert(2, ({
+    typedef struct st st;
+    struct st {
+      int a;
+    };
+    st x;
+    x.a = 2;
+    x.a;
+  }), "typedef struct st st; struct st { int a; }; st x; x.a =2; x.a;");
 
   assert(2, ({
     short x;

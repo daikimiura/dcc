@@ -55,7 +55,7 @@ void gen_addr(Node *node) {
           printf("  push [_%s@GOTPCREL + rip]\n", var->name);
         else
           // https://kawasin73.hatenablog.com/entry/2019/01/05/183917
-          printf("  push [%s@GOTPCREL + rip]\n", var->name);
+          printf("  push [_%s@GOTPCREL + rip]\n", var->name);
       }
 
       return;
@@ -616,7 +616,7 @@ void gen(Node *node) {
 void emit_data(Program *prog) {
   for (VarList *vl = prog->globals; vl; vl = vl->next) {
     if (!vl->var->is_static)
-      printf(".global %s\n", vl->var->name);
+      printf(".global _%s\n", vl->var->name);
   }
 
   // 初期化されていないグローバル変数はbss領域に格納
@@ -629,7 +629,7 @@ void emit_data(Program *prog) {
       continue;
 
     printf(".align %d\n", gvar->ty->align);
-    printf("%s:\n", gvar->name);
+    printf("_%s:\n", gvar->name);
     // 指定したバイト数(var->ty->size)を0で埋める
     // https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
     printf("  .zero %d\n", gvar->ty->size);
@@ -643,12 +643,12 @@ void emit_data(Program *prog) {
     if (!gvar->initializer)
       continue;
     printf(".align %d\n", gvar->ty->align);
-    printf("%s:\n", gvar->name);
+    printf("_%s:\n", gvar->name);
 
     for (Initializer *init = gvar->initializer; init; init = init->next) {
       if (init->label)
         // 他のグローバル変数への参照
-        printf("  .quad %s%+ld\n", init->label, init->addend);
+        printf("  .quad _%s%+ld\n", init->label, init->addend);
       else if (init->size == 1)
         printf("  .byte %ld\n", init->val);
       else

@@ -7,7 +7,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -319,12 +318,12 @@ Type *struct_type();
 
 void add_type(Node *node);
 
-Type *char_type;
-Type *int_type;
-Type *short_type;
-Type *long_type;
-Type *void_type;
-Type *bool_type;
+extern Type *char_type;
+extern Type *int_type;
+extern Type *short_type;
+extern Type *long_type;
+extern Type *void_type;
+extern Type *bool_type;
 
 Type *array_of(Type *pointer_to, int size);
 

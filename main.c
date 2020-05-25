@@ -7,7 +7,7 @@
 char *read_file(char *path) {
   FILE *fp = fopen(path, "r");
   if (!fp)
-    error("%s を開けません: %s", path, strerror(errno));
+    error("%s を開けません", path);
 
   int filemax = 10 * 1024 * 1024; // 10 MB
   char *buf = malloc(filemax);
@@ -23,10 +23,8 @@ char *read_file(char *path) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
-    fprintf(stderr, "引数の個数が正しくありません\n");
-    return 1;
-  }
+  if (argc != 2)
+    error("引数の個数が正しくありません\n");
 
   // トークナイズしてパースする
   filename = argv[1];

@@ -315,7 +315,7 @@ Type *find_typedef(Token *tok) {
 // 見つからなかった場合はNULLを返す
 TagScope *find_tag(Token *tok) {
   for (TagScope *sc = tag_scope; sc; sc = sc->next)
-    if (strlen(sc->name) == tok->len == !strncmp(tok->str, sc->name, tok->len))
+    if (strlen(sc->name) == tok->len && !strncmp(tok->str, sc->name, tok->len))
       return sc;
   return NULL;
 }
