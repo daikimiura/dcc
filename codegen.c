@@ -239,12 +239,15 @@ void gen_binary(Node *node) {
       printf("  movzx rax, al\n");
       break;
     case ND_BITAND:
+    case ND_BITAND_EQ:
       printf("  and rax, rdi\n");
       break;
     case ND_BITOR:
+    case ND_BITOR_EQ:
       printf("  or rax, rdi\n");
       break;
     case ND_BITXOR:
+    case ND_BITXOR_EQ:
       printf("  xor rax, rdi\n");
       break;
     case ND_SHL:
@@ -468,6 +471,9 @@ void gen(Node *node) {
     case ND_DIV_EQ:
     case ND_SHL_EQ:
     case ND_SHR_EQ:
+    case ND_BITAND_EQ:
+    case ND_BITOR_EQ:
+    case ND_BITXOR_EQ:
       gen_addr(node->lhs);
       printf("  push [rsp]\n");
       load(node->lhs->ty);
@@ -486,7 +492,8 @@ void gen(Node *node) {
       // [アドレス]
       // [storeする値]
       // -------<下位アドレス>-------
-      // のようになってないといけないのでrspのアドレスをpushする
+      // のようになってないといけないのでrspのアドレス(左辺値のアドレス)をpushする
+      // (loadはスタックからpopしてpushするので、ここで左辺値のアドレスをpushしておかないとstoreできない)
       printf("  push [rsp]\n");
       load(node->ty);
       inc(node->ty);

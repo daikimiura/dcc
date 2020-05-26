@@ -1430,7 +1430,7 @@ Node *expr() {
 }
 
 // assign = conditional (assign-op assign)?
-// assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>="
+// assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>=" | "&=" | "|=" | "^="
 Node *assign() {
   Node *node = conditional();
 
@@ -1457,6 +1457,18 @@ Node *assign() {
       return new_node(ND_PTR_SUB_EQ, node, assign());
     else
       return new_node(ND_SUB_EQ, node, assign());
+  }
+
+  if (consume("&=")) {
+    return new_node(ND_BITAND_EQ, node, assign());
+  }
+
+  if (consume("|=")) {
+    return new_node(ND_BITOR_EQ, node, assign());
+  }
+
+  if (consume("^=")) {
+    return new_node(ND_BITXOR_EQ, node, assign());
   }
 
   if (consume("<<=")) {
