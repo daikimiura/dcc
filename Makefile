@@ -7,7 +7,7 @@ dcc: $(OBJS)
 
 $(OBJS): dcc.h
 
-dcc-gen2: dcc $(SRCS) dcc.h
+dcc-gen2: dcc $(SRCS) dcc.h ./self.sh
 	./self.sh
 
 tests_extern.o: tests_extern

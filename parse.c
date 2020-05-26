@@ -181,7 +181,7 @@ Node *new_node_add(Node *lhs, Node *rhs) {
     return new_node(ND_PTR_ADD, lhs, rhs);
   if (is_integer(lhs->ty) && rhs->ty->ptr_to) // num + ptr
     return new_node(ND_PTR_ADD, rhs, lhs);
-  error("`+` の左辺値と右辺値のどちらか、もしくは両方が不適です");
+  error_at(token->str, "`+` の左辺値と右辺値のどちらか、もしくは両方が不適です");
 }
 
 Node *new_node_sub(Node *lhs, Node *rhs) {
@@ -193,7 +193,7 @@ Node *new_node_sub(Node *lhs, Node *rhs) {
     return new_node(ND_PTR_SUB, lhs, rhs);
   if (lhs->ty->ptr_to && rhs->ty->ptr_to) // ptr - ptr
     return new_node(ND_PTR_DIFF, lhs, rhs);
-  error("`-` の左辺値と右辺値のどちらか、もしくは両方が不適です");
+  error_at(token->str, "`-` の左辺値と右辺値のどちらか、もしくは両方が不適です");
 }
 
 Node *new_node_null() {
@@ -471,7 +471,7 @@ bool is_function() {
   token = tok;
 
   return is_func;
-};
+}
 
 Node *read_expr_stmt() {
   return new_node_unary(ND_EXPR_STMT, expr());

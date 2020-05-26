@@ -13,7 +13,7 @@ Type *long_type = &(Type) {TY_LONG, 8, 8};
 
 bool is_integer(Type *ty) {
   return ty->kind == TY_INT || ty->kind == TY_SHORT || ty->kind == TY_LONG ||
-         ty->kind == TY_CHAR || ty->kind == TY_BOOL;
+         ty->kind == TY_CHAR || ty->kind == TY_BOOL || ty->kind == TY_ENUM;
 }
 
 Type *new_type(TypeKind kind, int size, int align) {
