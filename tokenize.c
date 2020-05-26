@@ -333,6 +333,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "do", 2) == 0 && !is_alnum(p[2])) {
+      cur = new_token(TK_RESERVED, cur, p, 2);
+      p += 2;
+      continue;
+    }
+
     if (strncmp(p, "while", 5) == 0 && !is_alnum(p[5])) {
       cur = new_token(TK_RESERVED, cur, p, 5);
       p += 5;

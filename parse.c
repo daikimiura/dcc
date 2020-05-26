@@ -1035,6 +1035,7 @@ Node *stmt(void) {
 //      | "if" "(" expr ")" stmt ( "else" stmt )?
 //      | "while" "(" expr ")" stmt
 //      | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
+//      | "do" stmt "while" "(" expr ")"
 //      | expr ";"
 //      | "{" stmt* "}"
 //      | "break" ";"
@@ -1107,6 +1108,17 @@ Node *stmt2() {
 
     node->then = stmt();
     leave_scope(sc);
+    return node;
+  }
+
+  if (consume("do")) {
+    Node *node = new_node(ND_DO, NULL, NULL);
+    node->then = stmt();
+    expect("while");
+    expect("(");
+    node->cond = expr();
+    expect(")");
+    expect(";");
     return node;
   }
 

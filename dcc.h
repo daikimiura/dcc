@@ -165,6 +165,7 @@ typedef enum {
   ND_FOR, // for
   ND_SWITCH, // switch
   ND_CASE, // case
+  ND_DO, // do
   ND_TERNARY, // ?:
   ND_BLOCK, // ブロック { ... }
   ND_FUNCALL, // 関数呼び出し
