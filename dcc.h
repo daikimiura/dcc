@@ -223,6 +223,7 @@ struct Function {
   VarList *params; // 引数
   int stack_size; // 引数の個数 * 8 (関数呼び出し時にに下げるスタックの大きさ)
   bool is_static; // staticかどうか
+  bool has_varargs; // 可変長引数をとるかどうか
 };
 
 typedef struct {
