@@ -19,14 +19,31 @@ int feof(FILE *stream);
 static void assert() {}
 int strcmp(char *s1, char *s2);
 int printf(char *fmt, ...);
+int exit(int code);
+int memcmp(void *buf1, void *buf2, int n);
 int sprintf(char *buf, char *fmt, ...);
+int strncasecmp(char *s1, char *s2);
 long strlen(char *p);
 int strncmp(char *p, char *q);
 void *memcpy(char *dst, char *src, long n);
 char *strndup(char *p, long n);
 int isspace(int c);
+int isdigit(int c);
 char *strstr(char *haystack, char *needle);
 long strtol(char *nptr, char **endptr, int base);
+typedef struct {
+  int gp_offset;
+  int fp_offset;
+  void *overflow_arg_area;
+  void *reg_save_area;
+} __va_elem;
+typedef __va_elem va_list[1];
+static void va_start(__va_elem *ap) {
+  __builtin_va_start(ap);
+}
+static void va_end(__va_elem *ap) {}
+int vfprintf(FILE *stream, char *format, va_list arg);
+int fprintf(FILE *stream, char *format, ...);
 EOF
 
   grep -v '^#' dcc.h >>$TMP/$1
@@ -37,8 +54,6 @@ EOF
   gsed -i 's/\bbool\b/_Bool/g' $TMP/$1
   gsed -i 's/\btrue\b/1/g; s/\bfalse\b/0/g;' $TMP/$1
   gsed -i 's/\bNULL\b/0/g' $TMP/$1
-  # 可変長引数をとる関数
-  gsed -i 's/, \.\.\.//g' $TMP/$1
   gsed -i 's/INT_MAX/2147483647/g' $TMP/$1
 
   ./dcc $TMP/$1 >$TMP/${1%.c}.s

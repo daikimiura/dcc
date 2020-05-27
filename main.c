@@ -29,13 +29,12 @@ int main(int argc, char **argv) {
   // トークナイズしてパースする
   filename = argv[1];
   user_input = read_file(argv[1]);
-
   token = tokenize(user_input);
   Program *prog = program();
 
   // 関数ごとにローカル変数にオフセットを割り当てる
   for (Function *fn = prog->fns; fn; fn = fn->next) {
-    int offset = 0;
+    int offset = fn->has_varargs ? 56 : 0;
     for (VarList *vl = fn->locals; vl; vl = vl->next) {
       Var *var = vl->var;
       offset = align_to(offset, var->ty->align);

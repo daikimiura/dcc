@@ -1929,6 +1929,8 @@ Node *primary() {
         if (!sc->var || sc->var->ty->kind != TY_FUNC)
           error_at(tok->str, "関数ではありません");
         node->ty = sc->var->ty->return_ty;
+      } else if (!strcmp(node->funcname, "__builtin_va_start")) {
+        node->ty = void_type;
       } else {
         warn_at(tok->str, "関数の暗黙的な宣言が使われました");
         node->ty = int_type; // とりあえずintにしておく

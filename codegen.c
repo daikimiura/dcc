@@ -441,6 +441,17 @@ void gen(Node *node) {
         gen(n);
       return;
     case ND_FUNCALL: {
+      if(!strcmp(node->funcname, "__builtin_va_start")) {
+        // https://uclibc.org/docs/psABI-x86_64.pdf
+        printf("  pop rax\n");
+        printf("  mov edi, dword ptr [rbp-8]\n");
+        printf("  mov dword ptr [rax], 0\n");
+        printf("  mov dword ptr [rax+4], 0\n");
+        printf("  mov qword ptr [rax+8], rdi\n");
+        printf("  mov qword ptr [rax+16], 0\n");
+        return;
+      }
+
       int nargs = 0; // 引数の個数
       for (Node *arg = node->args; arg; arg = arg->next) {
         gen(arg);
@@ -713,6 +724,20 @@ void emit_text(Program *prog) {
     printf("  push rbp\n");
     printf("  mov rbp, rsp\n");
     printf("  sub rsp, %d\n", fn->stack_size);
+
+    if(fn->has_varargs) {
+      int n= 0;
+      for(VarList *vl = fn->params; vl; vl = vl->next)
+        n++;
+
+      printf("mov dword ptr [rbp-8], %d\n", n * 8);
+      printf("mov [rbp-16], r9\n");
+      printf("mov [rbp-24], r8\n");
+      printf("mov [rbp-32], rcx\n");
+      printf("mov [rbp-40], rdx\n");
+      printf("mov [rbp-48], rsi\n");
+      printf("mov [rbp-56], rdi\n");
+    }
 
     // ABIで指定されたレジスタに格納されている関数の引数の値を
     // ローカル変数のためのスタック上の領域に書き出す
