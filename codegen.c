@@ -467,6 +467,9 @@ void gen(Node *node) {
       printf("  call _%s\n", node->funcname);
       printf("  add rsp, 8\n"); // 引いた分を戻す
       printf(".L.end.%d:\n", seq);
+      if (node->ty->kind == TY_BOOL)
+        // _Boolを返す関数の場合、RAXの下位8bitのみが立っていないといけない
+        printf("  movzx rax, al\n");
       printf("  push rax\n");
       return;
     }
